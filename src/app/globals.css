@@ -1,0 +1,74 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --background: #08080a;
+    --surface-1: #121216;
+    --surface-2: #181820;
+    --surface-3: #22222c;
+    --border-color: #272733;
+    --gold: #f59e0b;
+    --gold-light: #fbbf24;
+    --gold-dark: #b45309;
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0a0a0e;
+}
+::-webkit-scrollbar-thumb {
+  background: #272733;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #f59e0b55;
+}
+
+/* Gold Bull Glow */
+.gold-glow {
+  box-shadow: 0 0 25px -5px rgba(245, 158, 11, 0.25);
+}
+
+.gold-glow-lg {
+  box-shadow: 0 0 45px -5px rgba(245, 158, 11, 0.4);
+}
+
+.gold-border {
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.gold-gradient-text {
+  background: linear-gradient(135deg, #fef08a 0%, #f59e0b 50%, #d97706 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.charcoal-card {
+  background: #111116;
+  border: 1px solid #23232f;
+  border-radius: 0.75rem;
+}
+
+.charcoal-card-hover {
+  transition: all 0.2s ease-in-out;
+}
+.charcoal-card-hover:hover {
+  border-color: rgba(245, 158, 11, 0.5);
+  background: #15151c;
+}

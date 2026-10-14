@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: bigbull-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bigbull_user
+      POSTGRES_PASSWORD: bigbull_secret
+      POSTGRES_DB: bigbull_db
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - bigbull_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bigbull_user -d bigbull_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  bigbull_pgdata:
+    driver: local
