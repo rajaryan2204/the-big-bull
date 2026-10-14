@@ -29,6 +29,8 @@ model Team {
   score               Int                  @default(0)
   correctAnswers      Int                  @default(0)
   attemptedQuestions  Int                  @default(0)
+  strikesCount        Int                  @default(0)
+  isDisqualified      Boolean              @default(false)
   isActive            Boolean              @default(true)
   isDisabled          Boolean              @default(false)
   connectionStatus    String               @default("DISCONNECTED") // CONNECTED, DISCONNECTED

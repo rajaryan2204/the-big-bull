@@ -1424,6 +1424,22 @@ export class DemoStore implements StorageEngine {
       { teamId }
     );
 
+    const prisma = getPrismaClient();
+    if (prisma) {
+      try {
+        await prisma.team.update({
+          where: { id: teamId },
+          data: {
+            strikesCount: team.strikesCount,
+            isDisqualified: isDisqualified,
+            isDisabled: isDisqualified ? true : team.isDisabled,
+          },
+        });
+      } catch (err: any) {
+        console.warn("Prisma recordTeamStrike sync notice:", err.message);
+      }
+    }
+
     this.saveToFile();
     return { strikesCount: team.strikesCount, isDisqualified };
   }
@@ -1438,6 +1454,23 @@ export class DemoStore implements StorageEngine {
     this.teams.set(teamId, team);
 
     await this.logAudit("STRIKES_RESET", "ADMIN", { teamId, message: "Administrator pardoned all strikes." }, { teamId });
+
+    const prisma = getPrismaClient();
+    if (prisma) {
+      try {
+        await prisma.team.update({
+          where: { id: teamId },
+          data: {
+            strikesCount: 0,
+            isDisqualified: false,
+            isDisabled: false,
+          },
+        });
+      } catch (err: any) {
+        console.warn("Prisma resetTeamStrikes sync notice:", err.message);
+      }
+    }
+
     this.saveToFile();
     return this.toPublicTeam(team);
   }

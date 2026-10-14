@@ -25,8 +25,8 @@ export async function GET(req: NextRequest) {
     }
 
     const team = await storage.getTeamById(payload.teamId);
-    if (!team || team.isDisabled) {
-      return NextResponse.json({ authenticated: false, error: "Team unavailable" }, { status: 403 });
+    if (!team) {
+      return NextResponse.json({ authenticated: false, error: "Team unavailable" }, { status: 404 });
     }
 
     return NextResponse.json({ authenticated: true, team });

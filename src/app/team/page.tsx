@@ -156,9 +156,9 @@ export default function TeamTerminalPage() {
       setTeam(pState.team);
       const sCount = pState.team.strikesCount || 0;
       setStrikes(sCount);
-      const disq = !!pState.team.isDisqualified;
+      const disq = !!pState.team.isDisqualified || sCount >= 3;
       setIsDisqualified(disq);
-      if (!disq && sCount < 3) {
+      if (disq) {
         setLockdownActive(false);
       }
       if (pState.currentAnswer) {
@@ -168,14 +168,16 @@ export default function TeamTerminalPage() {
 
     socket.on("team:strike_update", (data: { strikesCount: number; isDisqualified: boolean; reason: string }) => {
       setStrikes(data.strikesCount);
-      setIsDisqualified(data.isDisqualified);
-      if (!data.isDisqualified && data.strikesCount < 3) {
+      const disq = data.isDisqualified || data.strikesCount >= 3;
+      setIsDisqualified(disq);
+      if (disq) {
         setLockdownActive(false);
       } else {
-        soundFx.playStrikeAlarm();
-        if (typeof navigator !== "undefined" && navigator.vibrate) {
-          navigator.vibrate([200, 100, 200]);
-        }
+        setLockdownActive(true);
+      }
+      soundFx.playStrikeAlarm();
+      if (typeof navigator !== "undefined" && navigator.vibrate) {
+        navigator.vibrate([200, 100, 200]);
       }
     });
 
@@ -195,8 +197,20 @@ export default function TeamTerminalPage() {
     (reason: string) => {
       if (isDisqualified) return;
       const now = Date.now();
-      if (now - lastIncidentTimeRef.current < 2000) return;
+      if (now - lastIncidentTimeRef.current < 2500) return;
       lastIncidentTimeRef.current = now;
+
+      // Immediate local strike increment for instant visual feedback
+      setStrikes((prev) => {
+        const next = prev + 1;
+        if (next >= 3) {
+          setIsDisqualified(true);
+          setLockdownActive(false);
+        } else {
+          setLockdownActive(true);
+        }
+        return next;
+      });
 
       soundFx.playStrikeAlarm();
       if (typeof navigator !== "undefined" && navigator.vibrate) {
@@ -204,22 +218,25 @@ export default function TeamTerminalPage() {
       }
 
       setLockdownReason(reason);
-      setLockdownActive(true);
 
       if (socketRef.current && socketRef.current.connected) {
+        socketRef.current.emit("team:record_strike", { reason });
         socketRef.current.emit("team:security_incident", { reason });
       }
 
       fetch("/api/team/action", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "team:security_incident", payload: { reason } }),
+        body: JSON.stringify({ action: "record_strike", reason, payload: { reason } }),
       })
         .then((res) => res.json())
         .then((data) => {
-          if (data.strikeUpdate) {
-            setStrikes(data.strikeUpdate.strikesCount);
-            setIsDisqualified(data.strikeUpdate.isDisqualified);
+          if (data && typeof data.strikesCount === "number") {
+            setStrikes(data.strikesCount);
+            if (data.isDisqualified || data.strikesCount >= 3) {
+              setIsDisqualified(true);
+              setLockdownActive(false);
+            }
           }
         })
         .catch(() => {});
@@ -238,7 +255,9 @@ export default function TeamTerminalPage() {
     };
 
     const handleWindowBlur = () => {
-      triggerSecurityStrike("Lost Browser Window Focus");
+      if (!document.hasFocus() || document.hidden) {
+        triggerSecurityStrike("Lost Browser Window Focus");
+      }
     };
 
     const handleFullscreenChange = () => {
@@ -249,7 +268,13 @@ export default function TeamTerminalPage() {
         (document as any).msFullscreenElement
       );
       setIsFullscreen(active);
-      if (!active && hasEnteredTerminal && !isDisqualified) {
+      const supportsFullscreen = typeof document !== "undefined" && !!(
+        document.fullscreenEnabled ||
+        (document as any).webkitFullscreenEnabled ||
+        (document as any).mozFullScreenEnabled ||
+        (document as any).msFullscreenEnabled
+      );
+      if (supportsFullscreen && !active && hasEnteredTerminal && !isDisqualified) {
         triggerSecurityStrike("Exited Mandatory Fullscreen");
       }
     };
@@ -330,6 +355,30 @@ export default function TeamTerminalPage() {
     return () => clearInterval(pollInterval);
   }, []);
 
+  // Periodic private team state sync (strikes, disqualification, balance)
+  useEffect(() => {
+    const fetchTeamMe = async () => {
+      try {
+        const res = await fetch("/api/auth/team/me");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.authenticated && data.team) {
+            setTeam(data.team);
+            setStrikes(data.team.strikesCount || 0);
+            const disq = !!data.team.isDisqualified || (data.team.strikesCount || 0) >= 3;
+            setIsDisqualified(disq);
+            if (disq) {
+              setLockdownActive(false);
+            }
+          }
+        }
+      } catch {}
+    };
+
+    const teamInterval = setInterval(fetchTeamMe, 2500);
+    return () => clearInterval(teamInterval);
+  }, []);
+
   // Enter Fullscreen Lock
   const enterFullscreen = async () => {
     try {
@@ -344,10 +393,9 @@ export default function TeamTerminalPage() {
         await docEl.msRequestFullscreen();
       }
       setIsFullscreen(true);
-      setHasEnteredTerminal(true);
-      setLockdownActive(false);
     } catch {
       // In iOS or unsupported webviews, allow entering terminal
+    } finally {
       setHasEnteredTerminal(true);
       setLockdownActive(false);
     }
@@ -875,9 +923,9 @@ export default function TeamTerminalPage() {
                 ))}
               </div>
               <div className="mt-2 text-xs font-bold text-red-600">
-                {strikes === 1 && "Strike 1 of 3 issued. 2 remaining."}
+                {(strikes === 0 || strikes === 1) && "Strike 1 of 3 issued. 2 warnings remaining."}
                 {strikes === 2 && "Strike 2 of 3: FINAL WARNING before disqualification!"}
-                {strikes >= 3 && "Maximum violations reached."}
+                {strikes >= 3 && "Maximum violations reached. Terminal locked."}
               </div>
             </div>
 
@@ -886,7 +934,7 @@ export default function TeamTerminalPage() {
               className="w-full py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold text-xs uppercase tracking-wider shadow-sm transition flex items-center justify-center gap-2 cursor-pointer min-h-[48px]"
             >
               <Maximize2 className="w-4 h-4" />
-              <span>Re-Enter Fullscreen Terminal</span>
+              <span>Acknowledge Warning & Re-Enter Terminal</span>
             </button>
           </div>
         </div>

@@ -68,15 +68,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(res);
     }
 
-    if (action === "record_strike") {
-      const strikeRes = await storage.recordTeamStrike(
-        team.id,
-        data.reason || "Minimized window / exited fullscreen"
-      );
+    if (action === "record_strike" || action === "team:security_incident") {
+      const strikeReason = data.reason || data.payload?.reason || "Minimized window / exited fullscreen";
+      const strikeRes = await storage.recordTeamStrike(team.id, strikeReason);
       try {
         await getGameEngine().broadcastAll();
       } catch (e) {}
-      return NextResponse.json(strikeRes);
+      return NextResponse.json({
+        success: true,
+        strikesCount: strikeRes.strikesCount,
+        isDisqualified: strikeRes.isDisqualified,
+        strikeUpdate: strikeRes,
+      });
     }
 
     return NextResponse.json({ error: `Unknown action: ${action}` }, { status: 400 });

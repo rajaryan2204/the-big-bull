@@ -183,18 +183,16 @@ export function setupSocketServer(httpServer: HttpServer): SocketIOServer {
       }
     );
 
-    socket.on("team:record_strike", async (data: { reason: string }, callback) => {
+    const handleRecordStrike = async (data: { reason?: string; payload?: { reason?: string } }, callback?: any) => {
       if (!authenticatedTeamId) return;
       try {
-        const strikeRes = await storage.recordTeamStrike(
-          authenticatedTeamId,
-          data.reason || "Minimized window or exited fullscreen lock"
-        );
+        const strikeReason = data?.reason || data?.payload?.reason || "Minimized window or exited fullscreen lock";
+        const strikeRes = await storage.recordTeamStrike(authenticatedTeamId, strikeReason);
 
         socket.emit("team:strike_update", {
           strikesCount: strikeRes.strikesCount,
           isDisqualified: strikeRes.isDisqualified,
-          reason: data.reason,
+          reason: strikeReason,
         });
 
         if (strikeRes.isDisqualified) {
@@ -209,7 +207,10 @@ export function setupSocketServer(httpServer: HttpServer): SocketIOServer {
       } catch (e) {
         console.error("Strike record error:", e);
       }
-    });
+    };
+
+    socket.on("team:record_strike", handleRecordStrike);
+    socket.on("team:security_incident", handleRecordStrike);
 
     // --- Admin Event Handlers ---
 
