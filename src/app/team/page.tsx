@@ -168,7 +168,7 @@ export default function TeamTerminalPage() {
         navigator.vibrate([200, 100, 200]);
       }
 
-      if (socketRef.current) {
+      if (socketRef.current && socketRef.current.connected) {
         socketRef.current.emit("team:record_strike", { reason }, (res: any) => {
           if (res) {
             setStrikes(res.strikesCount);
@@ -177,6 +177,20 @@ export default function TeamTerminalPage() {
             }
           }
         });
+      } else {
+        fetch("/api/team/action", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "record_strike", reason }),
+        })
+          .then((res) => res.json())
+          .then((res) => {
+            if (res && res.strikesCount !== undefined) {
+              setStrikes(res.strikesCount);
+              if (res.isDisqualified) setIsDisqualified(true);
+            }
+          })
+          .catch(() => {});
       }
     },
     [isDisqualified]
@@ -313,39 +327,106 @@ export default function TeamTerminalPage() {
     router.replace("/join");
   };
 
-  // Submit Answer
+  // Submit Answer (Dual: Socket + HTTP Fallback for Vercel)
   const submitAnswer = async (option: string) => {
-    if (!socketRef.current || isDisqualified) return;
+    if (isDisqualified) return;
     setLockingIn(true);
     soundFx.playLockSound();
-    socketRef.current.emit(
-      "team:submit_answer",
-      { selectedOption: option },
-      (res: { success: boolean; error?: string }) => {
-        setLockingIn(false);
-        setConfirmModal(null);
-        if (!res.success) {
-          alert(res.error || "Submission failed");
+
+    let handled = false;
+    if (socketRef.current && socketRef.current.connected) {
+      socketRef.current.emit(
+        "team:submit_answer",
+        { selectedOption: option },
+        (res: { success: boolean; error?: string }) => {
+          setLockingIn(false);
+          setConfirmModal(null);
+          if (!res.success) {
+            alert(res.error || "Submission failed");
+          }
         }
+      );
+      handled = true;
+    }
+
+    try {
+      const res = await fetch("/api/team/action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "submit_answer", selectedOption: option }),
+      });
+      const data = await res.json();
+      setLockingIn(false);
+      setConfirmModal(null);
+      if (!res.ok && !handled) {
+        alert(data.error || "Submission failed");
+      } else if (data.success) {
+        setSelectedOption(option);
       }
-    );
+    } catch (e) {
+      if (!handled) setLockingIn(false);
+    }
   };
 
-  // Purchase Lifeline
-  const buyLifeline = (type: LifelineType) => {
-    if (!socketRef.current || isDisqualified) return;
+  // Purchase Lifeline (Dual: Socket + HTTP Fallback)
+  const buyLifeline = async (type: LifelineType) => {
+    if (isDisqualified) return;
     soundFx.playCoinDing();
-    socketRef.current.emit(
-      "team:buy_lifeline",
-      { lifelineType: type },
-      (res: { success: boolean; error?: string }) => {
-        setConfirmModal(null);
-        if (!res.success) {
-          alert(res.error || "Purchase failed");
+
+    let handled = false;
+    if (socketRef.current && socketRef.current.connected) {
+      socketRef.current.emit(
+        "team:buy_lifeline",
+        { lifelineType: type },
+        (res: { success: boolean; error?: string }) => {
+          setConfirmModal(null);
+          if (!res.success) {
+            alert(res.error || "Purchase failed");
+          }
         }
+      );
+      handled = true;
+    }
+
+    try {
+      const res = await fetch("/api/team/action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "buy_lifeline", lifelineType: type }),
+      });
+      const data = await res.json();
+      setConfirmModal(null);
+      if (!res.ok && !handled) {
+        alert(data.error || "Purchase failed");
       }
-    );
+    } catch (e) {}
   };
+
+  // HTTP Polling Fallback for Team Terminal
+  useEffect(() => {
+    if (!hasEnteredTerminal) return;
+    const pollInterval = setInterval(async () => {
+      if (!socketRef.current || !socketRef.current.connected) {
+        try {
+          const res = await fetch("/api/game/state");
+          const data = await res.json();
+          if (data.success && data.game) {
+            setGameState(data.game);
+            if (data.leaderboard) setLeaderboard(data.leaderboard);
+            if (data.game.status === "QUESTION_ACTIVE" && data.game.currentQuestion?.deadline) {
+              const ms = new Date(data.game.currentQuestion.deadline).getTime();
+              setRemainingSeconds(Math.max(0, Math.ceil((ms - Date.now()) / 1000)));
+              setIsPaused(false);
+            } else if (data.game.status === "QUESTION_PAUSED" && data.game.currentQuestion?.remainingOnPause) {
+              setRemainingSeconds(Math.ceil(data.game.currentQuestion.remainingOnPause / 1000));
+              setIsPaused(true);
+            }
+          }
+        } catch (e) {}
+      }
+    }, 1500);
+    return () => clearInterval(pollInterval);
+  }, [hasEnteredTerminal]);
 
   const currentQ = gameState?.currentQuestion;
   const gameStatus = gameState?.status || "LOBBY";

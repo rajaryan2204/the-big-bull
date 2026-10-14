@@ -10,7 +10,22 @@ export const DemoBanner: React.FC<DemoBannerProps> = ({ isDemoMode = true }) => 
   const [showModal, setShowModal] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  if (!isDemoMode) return null;
+  if (!isDemoMode) {
+    return (
+      <div className="bg-emerald-950/40 border-b border-emerald-500/30 px-4 py-2 text-xs text-emerald-200/90 flex items-center justify-between gap-3 z-50">
+        <div className="flex items-center gap-2">
+          <Database className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>
+            <strong className="text-emerald-400 font-semibold">LIVE DATABASE CONNECTED:</strong> Neon Serverless PostgreSQL (Schema: <code className="text-white">bigbull</code>). Persistent audit logs, teams & questions active.
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5 text-[10px] font-mono text-emerald-300 font-bold uppercase">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span>POSTGRES ONLINE</span>
+        </div>
+      </div>
+    );
+  }
 
   const copyCommand = () => {
     navigator.clipboard.writeText("docker compose up -d");

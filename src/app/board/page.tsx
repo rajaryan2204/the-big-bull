@@ -36,8 +36,11 @@ export default function SmartBoardPage() {
   const prevStatusRef = useRef<string>("LOBBY");
   const prevSecondRef = useRef<number>(300);
 
+  const socketRef = useRef<any>(null);
+
   useEffect(() => {
     const socket = getSocketClient(null, "board");
+    socketRef.current = socket;
 
     socket.on("game:state", (state: GameState) => {
       setGameState(state);
@@ -80,6 +83,39 @@ export default function SmartBoardPage() {
       socket.off("leaderboard:updated");
       socket.off("question:revealed");
     };
+  }, []);
+
+  // HTTP Polling Fallback (ensures Smart Board displays live sequences on Vercel Cloud)
+  useEffect(() => {
+    const pollInterval = setInterval(async () => {
+      if (!socketRef.current || !socketRef.current.connected) {
+        try {
+          const res = await fetch("/api/game/state");
+          const data = await res.json();
+          if (data.success && data.game) {
+            setGameState(data.game);
+            if (data.leaderboard) setLeaderboard(data.leaderboard);
+            if (data.answeredCount !== undefined) {
+              setAnswerCount({ answeredCount: data.answeredCount, totalCount: data.totalTeamsCount });
+            }
+            if (data.game.status === "QUESTION_ACTIVE" && data.game.currentQuestion?.deadline) {
+              const ms = new Date(data.game.currentQuestion.deadline).getTime();
+              setRemainingSeconds(Math.max(0, Math.ceil((ms - Date.now()) / 1000)));
+              setIsPaused(false);
+            } else if (data.game.status === "QUESTION_PAUSED" && data.game.currentQuestion?.remainingOnPause) {
+              setRemainingSeconds(Math.ceil(data.game.currentQuestion.remainingOnPause / 1000));
+              setIsPaused(true);
+            } else if (data.game.status === "ANSWER_REVEAL") {
+              setRevealData({
+                correctOption: data.game.currentQuestion?.correctOption || undefined,
+                explanation: data.game.currentQuestion?.explanation || undefined,
+              });
+            }
+          }
+        } catch (e) {}
+      }
+    }, 1000);
+    return () => clearInterval(pollInterval);
   }, []);
 
   const status = gameState?.status || "LOBBY";

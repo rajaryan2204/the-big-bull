@@ -201,15 +201,61 @@ export default function AdminDashboardPage() {
     });
   };
 
-  // Admin Socket Command Helper
-  const sendAdminCommand = (event: string, payload?: any) => {
-    if (!socketRef.current) return;
-    socketRef.current.emit(event, payload, (res: any) => {
-      if (res && !res.success) {
-        alert(res.error || "Command failed");
+  // Admin Command Helper (Dual Dispatch: WebSockets + HTTP fallback for Vercel Serverless)
+  const sendAdminCommand = async (event: string, payload?: any) => {
+    let socketDispatched = false;
+    if (socketRef.current && socketRef.current.connected) {
+      socketRef.current.emit(event, payload, (res: any) => {
+        if (res && !res.success) {
+          alert(res.error || "Command failed");
+        }
+      });
+      socketDispatched = true;
+    }
+
+    try {
+      const res = await fetch("/api/admin/game/control", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: event, options: payload }),
+      });
+      const data = await res.json();
+      if (!res.ok && !socketDispatched) {
+        alert(data.error || "Command execution error");
+      } else if (data.game) {
+        setGameState(data.game);
+        loadInitialData();
       }
-    });
+    } catch (e) {
+      if (!socketDispatched) console.error("HTTP control error:", e);
+    }
   };
+
+  // HTTP Polling Fallback (ensures live telemetry updates if WebSockets disconnect or on Vercel)
+  useEffect(() => {
+    if (!authenticated) return;
+    const pollInterval = setInterval(async () => {
+      if (!socketRef.current || !socketRef.current.connected) {
+        try {
+          const res = await fetch("/api/game/state");
+          const data = await res.json();
+          if (data.success && data.game) {
+            setGameState(data.game);
+            if (data.leaderboard) setLeaderboard(data.leaderboard);
+            if (data.game.status === "QUESTION_ACTIVE" && data.game.currentQuestion?.deadline) {
+              const ms = new Date(data.game.currentQuestion.deadline).getTime();
+              setRemainingSeconds(Math.max(0, Math.ceil((ms - Date.now()) / 1000)));
+              setIsPaused(false);
+            } else if (data.game.status === "QUESTION_PAUSED" && data.game.currentQuestion?.remainingOnPause) {
+              setRemainingSeconds(Math.ceil(data.game.currentQuestion.remainingOnPause / 1000));
+              setIsPaused(true);
+            }
+          }
+        } catch (e) {}
+      }
+    }, 1500);
+    return () => clearInterval(pollInterval);
+  }, [authenticated]);
 
   const copyCode = (code: string) => {
     navigator.clipboard.writeText(code);

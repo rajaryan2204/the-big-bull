@@ -202,6 +202,70 @@ export class DemoStore implements StorageEngine {
     }
   }
 
+  public async loadFromPostgres(prisma: any): Promise<boolean> {
+    try {
+      const dbTeams = await prisma.team.findMany();
+      if (!dbTeams || dbTeams.length === 0) return false;
+
+      const dbAdmins = await prisma.admin.findMany();
+      dbAdmins.forEach((a: any) => this.admins.set(a.username, a));
+
+      dbTeams.forEach((t: any) => {
+        this.teams.set(t.id, {
+          id: t.id,
+          teamCode: t.teamCode,
+          name: t.name,
+          accessCodeHash: t.accessCodeHash,
+          startingBalance: t.startingBalance,
+          currentBalance: t.currentBalance,
+          score: t.score,
+          correctAnswers: t.correctAnswers,
+          attemptedQuestions: t.attemptedQuestions,
+          isActive: t.isActive,
+          isDisabled: t.isDisabled,
+          isDisqualified: !!t.isDisqualified,
+          strikesCount: t.strikesCount || 0,
+          connectionStatus: t.connectionStatus as any,
+          lastSeenAt: t.lastSeenAt ? t.lastSeenAt.toISOString() : null,
+          createdAt: t.createdAt.toISOString(),
+          updatedAt: t.updatedAt.toISOString(),
+        });
+      });
+
+      const dbQuestions = await prisma.question.findMany();
+      dbQuestions.forEach((q: any) => {
+        this.questions.set(q.id, {
+          id: q.id,
+          text: q.text,
+          category: q.category,
+          optionA: q.optionA,
+          optionB: q.optionB,
+          optionC: q.optionC,
+          optionD: q.optionD,
+          correctOption: q.correctOption,
+          imageUrl: q.imageUrl || null,
+          visualClueUrl: q.visualClueUrl || null,
+          hintText: q.hintText || null,
+          explanation: q.explanation || null,
+          difficulty: q.difficulty as any,
+          durationSeconds: q.durationSeconds,
+          isActive: q.isActive,
+          createdAt: q.createdAt.toISOString(),
+          updatedAt: q.updatedAt.toISOString(),
+        });
+      });
+
+      await this.createOrResetGame();
+      this.isDemoMode = false;
+      this.saveToFile();
+      console.log(`🚀 [PostgreSQL] Synced ${dbTeams.length} teams & ${dbQuestions.length} questions from live Neon DB!`);
+      return true;
+    } catch (e: any) {
+      console.warn("⚠️ [PostgreSQL] Failed to sync from Neon:", e.message);
+      return false;
+    }
+  }
+
   public async seedDefaults(): Promise<void> {
     const adminUser = process.env.ADMIN_USERNAME || "admin";
     const adminPass = process.env.ADMIN_PASSWORD || "bigbull2026";
@@ -1229,29 +1293,52 @@ export class DemoStore implements StorageEngine {
 
 // Storage Singleton Factory
 let storageInstance: StorageEngine | null = null;
+let prismaClientInstance: PrismaClient | null = null;
+
+export function getPrismaClient(): PrismaClient | null {
+  if (prismaClientInstance) return prismaClientInstance;
+  const dbUrl = process.env.DATABASE_URL;
+  if (!dbUrl) return null;
+  try {
+    let finalUrl = dbUrl;
+    if (!finalUrl.includes("schema=")) {
+      finalUrl += (finalUrl.includes("?") ? "&" : "?") + "schema=bigbull";
+    }
+    prismaClientInstance = new PrismaClient({
+      datasources: {
+        db: { url: finalUrl },
+      },
+    });
+    return prismaClientInstance;
+  } catch (e) {
+    return null;
+  }
+}
 
 export async function getStorage(): Promise<StorageEngine> {
   if (storageInstance) return storageInstance;
 
-  const mode = process.env.STORAGE_MODE || "auto";
+  const store = new DemoStore();
+  const prisma = getPrismaClient();
 
-  if (mode === "postgres") {
+  if (prisma) {
     try {
-      const prisma = new PrismaClient();
       await prisma.$connect();
-      console.log("🚀 [Storage] Connected to PostgreSQL via Prisma!");
-      // If Postgres is fully working, we can use Prisma.
-      // But let's also initialize DemoStore as fallback or bridge.
+      console.log("🚀 [Storage] Connected to Neon PostgreSQL (schema: bigbull) via Prisma!");
+      const loaded = await store.loadFromPostgres(prisma);
+      if (loaded) {
+        store.isDemoMode = false;
+        storageInstance = store;
+        return storageInstance;
+      }
     } catch (e: any) {
-      console.warn("⚠️ [Storage] PostgreSQL connection failed:", e.message);
+      console.warn("⚠️ [Storage] PostgreSQL connection notice:", e.message);
     }
   }
 
-  // By default, DemoStore provides instantaneous, bulletproof, zero-latency local-first operation
-  // with persistence to .data/bigbull_state.json
-  const store = new DemoStore();
+  // Fallback to in-memory + local storage
   await store.initialize();
   storageInstance = store;
-  console.log("⚡ [Storage] THE BIG BULL Engine initialized successfully (Mode: In-Memory + Persistent Store)");
+  console.log("⚡ [Storage] THE BIG BULL Engine initialized successfully");
   return storageInstance;
 }
