@@ -1,5 +1,5 @@
 export interface DemoTeamDef {
-  teamCode: string; // e.g. BULLS-101
+  teamCode: string; // Unstop Team ID or unique squad code
   name: string;
   members: string[]; // Participant names (1 solo, 2, or 3+)
   accessCode: string; // Plaintext code used for initial seed / login
@@ -7,6 +7,111 @@ export interface DemoTeamDef {
 }
 
 export const DEMO_TEAMS: DemoTeamDef[] = [
+  {
+    teamCode: "U5694BFT",
+    name: "Astra",
+    members: ["Monu Kumar Ranjan", "Kishan Kumar", "Vishal Raj"],
+    accessCode: "9525724028",
+    startingBalance: 5000,
+  },
+  {
+    teamCode: "UGJ73P88",
+    name: "manish",
+    members: ["ASHUTOSH KUMAR SINGH SINGH", "Nitin Kumar", "vibhesh anand"],
+    accessCode: "7319694960",
+    startingBalance: 5000,
+  },
+  {
+    teamCode: "U40S5X5W",
+    name: "Big Brains",
+    members: ["Sayandip Mondal"],
+    accessCode: "6289210812",
+    startingBalance: 5000,
+  },
+  {
+    teamCode: "U7VYT685",
+    name: "HI",
+    members: ["Aarushi Kumari"],
+    accessCode: "9417270385",
+    startingBalance: 5000,
+  },
+  {
+    teamCode: "U3P8N6T1",
+    name: "Team NMS",
+    members: ["Navya Rai", "Shruti Pal", "Mahi Bharti"],
+    accessCode: "6393886946",
+    startingBalance: 5000,
+  },
+  {
+    teamCode: "UA3Y8K28",
+    name: "Champion",
+    members: ["Sharan Singla", "Kartik Kumar", "Ganish Singh"],
+    accessCode: "7814408271",
+    startingBalance: 5000,
+  },
+  {
+    teamCode: "UZ5O42M2",
+    name: "A- Team",
+    members: ["Navjot Kaur Sidhu Sidhu"],
+    accessCode: "9877229273",
+    startingBalance: 5000,
+  },
+  {
+    teamCode: "UE3DG836",
+    name: "The Core Team",
+    members: ["Mishika"],
+    accessCode: "7973776073",
+    startingBalance: 5000,
+  },
+  {
+    teamCode: "U2038XUL",
+    name: "Expo",
+    members: ["Ravinder Singh"],
+    accessCode: "9915185760",
+    startingBalance: 5000,
+  },
+  {
+    teamCode: "U6B5R27L",
+    name: "RRR",
+    members: ["Balwinder Singh", "Gurjot Singh", "Gurpreet Singh"],
+    accessCode: "7009013356",
+    startingBalance: 5000,
+  },
+  {
+    teamCode: "U58T19GI",
+    name: "Kon bnega crore pati",
+    members: ["Rupinder Kaur", "Mandeep Kaur"],
+    accessCode: "6284301206",
+    startingBalance: 5000,
+  },
+  {
+    teamCode: "UJ69Z94T",
+    name: "Alpha advisers",
+    members: ["Damini", "Mehakpreet Kaur"],
+    accessCode: "9306553894",
+    startingBalance: 5000,
+  },
+  {
+    teamCode: "U6Y7JQ65",
+    name: "TEAM 999",
+    members: ["Satyam Kumar", "Ayush Raj", "Rupinder Kaur"],
+    accessCode: "6287685472",
+    startingBalance: 5000,
+  },
+  {
+    teamCode: "UD19T48N",
+    name: "Alphas",
+    members: ["Prince Raj", "Kriti Raj Nandini", "ANIKET"],
+    accessCode: "9204684035",
+    startingBalance: 5000,
+  },
+  {
+    teamCode: "UO3SM292",
+    name: "Aryan kelvin",
+    members: ["Rishu Kumar", "Aashish Kumar", "Aryan Kumar"],
+    accessCode: "9162917339",
+    startingBalance: 5000,
+  },
   {
     teamCode: "BULLS-101",
     name: "Apex Predators",
@@ -24,7 +129,7 @@ export const DEMO_TEAMS: DemoTeamDef[] = [
   {
     teamCode: "BULLS-103",
     name: "Quantum Bulls",
-    members: ["Vikramaditya Rao"], // Solo participant
+    members: ["Vikramaditya Rao"],
     accessCode: "BULLS-103",
     startingBalance: 5000,
   },
@@ -45,7 +150,7 @@ export const DEMO_TEAMS: DemoTeamDef[] = [
   {
     teamCode: "BULLS-106",
     name: "Cyber Strikers",
-    members: ["Aditya Kulkarni"], // Solo participant
+    members: ["Aditya Kulkarni"],
     accessCode: "BULLS-106",
     startingBalance: 5000,
   },

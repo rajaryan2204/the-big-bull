@@ -307,7 +307,7 @@ describe("THE BIG BULL - Comprehensive Game Rules & Security Tests", () => {
   it("Rule 19: Preserves and recovers game state and questions across instances", async () => {
     const game = await store.getCurrentGame();
     expect(game.totalQuestions).toBeGreaterThanOrEqual(15);
-    expect(game.totalTeamsCount).toBe(8);
+    expect(game.totalTeamsCount).toBeGreaterThanOrEqual(8);
 
     const team = await store.getTeamByCode("BULLS-101");
     expect(team).not.toBeNull();
