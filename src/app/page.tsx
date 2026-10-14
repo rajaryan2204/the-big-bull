@@ -30,6 +30,7 @@ export default function StudentParticipantPortal() {
   const [checkingIncognito, setCheckingIncognito] = useState<boolean>(true);
 
   const demoTeams = [
+    { code: "TEST", name: "Test Team (test/test)" },
     { code: "BULLS-101", name: "Apex Predators" },
     { code: "BULLS-102", name: "Wall Street Wolves" },
     { code: "BULLS-103", name: "Quantum Bulls" },
@@ -109,7 +110,7 @@ export default function StudentParticipantPortal() {
 
   const quickSelect = (code: string) => {
     setTeamCode(code);
-    setAccessCode(code);
+    setAccessCode(code.toUpperCase() === "TEST" ? "test" : code);
     setError(null);
   };
 

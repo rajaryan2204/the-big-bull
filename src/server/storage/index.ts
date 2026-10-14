@@ -360,6 +360,16 @@ export class DemoStore implements StorageEngine {
       createdAt: new Date().toISOString(),
     });
 
+    // Test Admin: test / test
+    const testAdminHash = bcrypt.hashSync("test", 10);
+    this.admins.set("test", {
+      id: "admin-test-01",
+      username: "test",
+      passwordHash: testAdminHash,
+      name: "Test Administrator",
+      createdAt: new Date().toISOString(),
+    });
+
     // Seed Demo Teams
     for (const t of DEMO_TEAMS) {
       const hash = bcrypt.hashSync(t.accessCode, 10);
