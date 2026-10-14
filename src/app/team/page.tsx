@@ -20,6 +20,7 @@ import {
   Radio,
   Trophy,
   Users,
+  Zap,
 } from "lucide-react";
 import {
   GameState,
@@ -540,7 +541,7 @@ export default function TeamTerminalPage() {
   // ==========================================
   return (
     <div
-      className="min-h-[100dvh] bg-slate-50 text-slate-900 flex flex-col justify-between select-none relative overflow-x-hidden font-sans"
+      className="h-[100dvh] max-h-[100dvh] bg-slate-50 text-slate-900 flex flex-col justify-between select-none relative overflow-hidden font-sans"
       onContextMenu={(e) => e.preventDefault()}
       onCopy={(e) => e.preventDefault()}
       onCut={(e) => e.preventDefault()}
@@ -623,7 +624,7 @@ export default function TeamTerminalPage() {
 
             <button
               onClick={handleLogout}
-              className="w-full mt-4 py-3 rounded-xl border border-slate-300 bg-slate-50 text-slate-700 font-semibold text-xs hover:bg-slate-100"
+              className="w-full mt-4 py-3 rounded-xl border border-slate-300 bg-slate-50 text-slate-700 font-semibold text-xs hover:bg-slate-100 cursor-pointer"
             >
               Exit Terminal
             </button>
@@ -632,33 +633,26 @@ export default function TeamTerminalPage() {
       )}
 
       {/* ========================================================= */}
-      {/* TOP COMBAT HUD BAR - CLEAN WHITE & BLUE */}
+      {/* TOP COMBAT HUD BAR - CLEAN WHITE & BLUE (COMPACT) */}
       {/* ========================================================= */}
-      <header className="border-b border-slate-200 bg-white/95 backdrop-blur-md px-3 sm:px-4 py-2.5 flex items-center justify-between sticky top-0 z-30 shadow-2xs">
-        <div className="flex items-center gap-2 sm:gap-2.5">
-          <div className="flex items-center gap-1.5 text-xs sm:text-sm">
-            <div className="w-2.5 h-2.5 bg-blue-600 rounded-sm" />
-            <span className="font-bold text-slate-900 truncate max-w-[120px] sm:max-w-none">{team?.name}</span>
+      <header className="border-b border-slate-200 bg-white/95 backdrop-blur-md px-3 py-1.5 sm:py-2 flex items-center justify-between sticky top-0 z-30 shadow-2xs shrink-0">
+        <div className="flex items-center gap-2">
+          <div className="w-2.5 h-2.5 bg-blue-600 rounded-sm shrink-0" />
+          <div className="flex items-center gap-1.5 text-xs">
+            <span className="font-bold text-slate-900 truncate max-w-[130px] sm:max-w-none">{team?.name}</span>
             <span className="text-slate-400 font-mono text-[11px]">[{team?.teamCode}]</span>
-            {team?.members && team.members.length > 0 && (
-              <span className="text-[10px] text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 hidden md:inline-flex items-center gap-1 font-medium">
-                <Users className="w-2.5 h-2.5" />
-                {team.members.join(", ")}
-              </span>
-            )}
           </div>
-
           <span
-            className={`w-2 h-2 rounded-full ${connected ? "bg-emerald-500" : "bg-red-500 animate-pulse"}`}
+            className={`w-2 h-2 rounded-full shrink-0 ${connected ? "bg-emerald-500" : "bg-red-500 animate-pulse"}`}
             title={connected ? "Connected" : "Reconnecting"}
           />
         </div>
 
         {/* Tactical Coin Stash & Strikes Gauge */}
-        <div className="flex items-center gap-2 sm:gap-2.5">
+        <div className="flex items-center gap-2">
           {/* Strikes Counter Indicator */}
           <div
-            className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-[11px] font-bold ${
+            className={`flex items-center gap-1 px-2 py-0.5 rounded-md border text-[11px] font-bold ${
               strikes === 0
                 ? "bg-slate-50 border-slate-200 text-slate-500"
                 : strikes === 1
@@ -666,19 +660,19 @@ export default function TeamTerminalPage() {
                 : "bg-red-50 border-red-300 text-red-700 animate-pulse"
             }`}
           >
-            <ShieldAlert className="w-3.5 h-3.5" />
-            <span>Strikes: {strikes}/3</span>
+            <ShieldAlert className="w-3 h-3" />
+            <span>{strikes}/3</span>
           </div>
 
           {/* Coin Badge */}
-          <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 border border-blue-200 text-blue-900 font-bold text-xs">
+          <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-blue-50 border border-blue-200 text-blue-900 font-bold text-xs">
             <Coins className="w-3.5 h-3.5 text-blue-600" />
             <span>{(team?.currentBalance ?? 5000).toLocaleString()}</span>
           </div>
 
           <button
             onClick={handleLogout}
-            className="p-1.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
+            className="p-1 rounded-md border border-slate-200 bg-slate-50 text-slate-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
             title="Log Out"
           >
             <LogOut className="w-3.5 h-3.5" />
@@ -687,20 +681,20 @@ export default function TeamTerminalPage() {
       </header>
 
       {/* ========================================================= */}
-      {/* MAIN GAME WORKSPACE */}
+      {/* MAIN GAME WORKSPACE - 100% SINGLE SCREEN (NO SCROLL) */}
       {/* ========================================================= */}
-      <main className="flex-1 max-w-lg mx-auto w-full p-3 sm:p-4 flex flex-col justify-between">
+      <main className="flex-1 max-w-md mx-auto w-full px-2.5 sm:px-3 py-1.5 sm:py-2 flex flex-col justify-between overflow-hidden">
         {/* LOBBY / WAITING STATE */}
         {(gameStatus === "LOBBY" || gameStatus === "READY") && (
-          <div className="my-auto text-center p-6 sm:p-8 rounded-2xl bg-white border border-slate-200/80 shadow-sm space-y-3">
+          <div className="my-auto text-center p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/80 shadow-xs space-y-3">
             <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center mx-auto shadow-xs">
               <Radio className="w-6 h-6 animate-pulse" />
             </div>
             <div>
-              <span className="text-[11px] uppercase tracking-wider text-blue-600 font-bold bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100">
+              <span className="text-[10px] uppercase tracking-wider text-blue-600 font-bold bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100">
                 Arena Synchronized
               </span>
-              <h2 className="text-xl font-black text-slate-900 tracking-tight mt-2">
+              <h2 className="text-xl font-black text-slate-900 tracking-tight mt-1.5">
                 Waiting for Round 1
               </h2>
               <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto leading-relaxed">
@@ -709,9 +703,9 @@ export default function TeamTerminalPage() {
             </div>
 
             {team?.members && team.members.length > 0 && (
-              <div className="mt-4 pt-3.5 border-t border-slate-100">
-                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2 flex items-center justify-center gap-1.5">
-                  <Users className="w-3.5 h-3.5 text-blue-600" />
+              <div className="mt-3 pt-3 border-t border-slate-100">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1.5 flex items-center justify-center gap-1.5">
+                  <Users className="w-3 h-3 text-blue-600" />
                   <span>
                     Squad Roster ({team.members.length} {team.members.length === 1 ? "Participant" : "Participants"})
                   </span>
@@ -720,7 +714,7 @@ export default function TeamTerminalPage() {
                   {team.members.map((m, i) => (
                     <span
                       key={i}
-                      className="px-2.5 py-1 rounded-lg bg-blue-50 border border-blue-200 text-blue-800 text-xs font-semibold"
+                      className="px-2 py-0.5 rounded-md bg-blue-50 border border-blue-200 text-blue-800 text-[11px] font-semibold"
                     >
                       {m}
                     </span>
@@ -733,11 +727,11 @@ export default function TeamTerminalPage() {
 
         {/* SKIPPED STATE (BULL'S PASS) */}
         {hasPassed && (
-          <div className="my-auto text-center p-6 sm:p-8 rounded-2xl bg-white border border-blue-200 shadow-sm space-y-3">
-            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto">
-              <FastForward className="w-6 h-6" />
+          <div className="my-auto text-center p-5 sm:p-6 rounded-2xl bg-white border border-blue-200 shadow-xs space-y-2">
+            <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto">
+              <FastForward className="w-5 h-5" />
             </div>
-            <h2 className="text-lg font-black text-slate-900">
+            <h2 className="text-base font-black text-slate-900">
               Bull&apos;s Pass Deployed
             </h2>
             <p className="text-xs text-slate-600 max-w-xs mx-auto leading-relaxed">
@@ -746,28 +740,28 @@ export default function TeamTerminalPage() {
           </div>
         )}
 
-        {/* ACTIVE QUESTION CONSOLE */}
+        {/* ACTIVE QUESTION CONSOLE - ZERO SCROLL PHONE LAYOUT */}
         {(gameStatus === "QUESTION_ACTIVE" ||
           gameStatus === "QUESTION_PAUSED" ||
           gameStatus === "QUESTION_CLOSED" ||
           gameStatus === "ANSWER_REVEAL") &&
           currentQ &&
           !hasPassed && (
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2 shrink-0">
               {/* Question Sub-Header & Minimal Timer */}
-              <div className="flex items-center justify-between border-b border-slate-200 pb-2.5">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-xs font-bold uppercase tracking-wide text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
-                    Question {(gameState?.currentQuestionIndex || 0) + 1}
+              <div className="flex items-center justify-between border-b border-slate-200 pb-1.5 shrink-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] font-bold uppercase tracking-wide text-blue-700 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                    Q{(gameState?.currentQuestionIndex || 0) + 1}
                   </span>
-                  <span className="text-xs font-medium text-slate-500 truncate max-w-[140px] sm:max-w-none">
+                  <span className="text-xs font-semibold text-slate-600 truncate max-w-[140px]">
                     {currentQ.question.category}
                   </span>
                 </div>
 
                 {/* Digital Clock */}
                 <div
-                  className={`flex items-center gap-1.5 px-3 py-1 rounded-xl font-mono font-bold text-sm sm:text-base border ${
+                  className={`flex items-center gap-1 px-2.5 py-0.5 rounded-lg font-mono font-bold text-xs sm:text-sm border ${
                     remainingSeconds <= 15
                       ? "bg-red-50 border-red-300 text-red-700 animate-pulse"
                       : remainingSeconds <= 45
@@ -775,59 +769,53 @@ export default function TeamTerminalPage() {
                       : "bg-blue-50 border-blue-200 text-blue-800"
                   }`}
                 >
-                  <Clock className="w-4 h-4" />
+                  <Clock className="w-3.5 h-3.5" />
                   <span>{timerDisplay}</span>
-                  {isPaused && <span className="text-[10px] text-amber-700 ml-1">PAUSED</span>}
+                  {isPaused && <span className="text-[9px] text-amber-700 ml-1">PAUSED</span>}
                 </div>
               </div>
 
               {/* Question Card */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs space-y-2.5">
-                <p className="text-sm sm:text-base font-bold text-slate-900 leading-relaxed">
+              <div className="p-2.5 sm:p-3 rounded-xl bg-white border border-slate-200/80 shadow-2xs space-y-1.5 shrink-0">
+                <p className="text-xs sm:text-sm font-bold text-slate-900 leading-snug line-clamp-3">
                   {currentQ.question.text}
                 </p>
 
-                {/* Image if present */}
+                {/* Compact Image thumbnail if present */}
                 {currentQ.question.imageUrl && (
-                  <div className="rounded-xl overflow-hidden border border-slate-200 max-h-44 bg-slate-100">
-                    <img
-                      src={currentQ.question.imageUrl}
-                      alt="Question Reference"
-                      className="w-full h-full object-cover"
-                    />
+                  <div className="flex items-center gap-2 pt-0.5">
+                    <div className="relative rounded-lg overflow-hidden border border-slate-200 h-12 w-20 bg-slate-100 shrink-0">
+                      <img
+                        src={currentQ.question.imageUrl}
+                        alt="Reference"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <span className="text-[10px] text-slate-500 font-medium">Visual Clue Attached</span>
                   </div>
                 )}
 
                 {/* Private Unlocked Clues */}
                 {hintText && (
-                  <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-200 text-blue-950 text-xs flex items-start gap-2">
-                    <Lightbulb className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
-                    <div>
-                      <div className="font-bold text-[10px] uppercase text-blue-700">
-                        Unlocked Hint:
-                      </div>
-                      <div className="text-xs text-slate-800 mt-0.5">{hintText}</div>
-                    </div>
+                  <div className="p-1.5 rounded-lg bg-blue-50/80 border border-blue-200 text-blue-950 text-[11px] flex items-center gap-1.5">
+                    <Lightbulb className="w-3 h-3 text-blue-600 shrink-0" />
+                    <span className="truncate"><strong>Hint:</strong> {hintText}</span>
                   </div>
                 )}
 
                 {visualClueUrl && (
-                  <div className="p-3 rounded-xl bg-purple-50/70 border border-purple-200 text-purple-950">
-                    <div className="font-bold text-[10px] uppercase text-purple-700 mb-1 flex items-center gap-1">
-                      <Eye className="w-3.5 h-3.5" />
-                      <span>Vision Clue:</span>
+                  <div className="flex items-center gap-2 p-1.5 rounded-lg bg-purple-50/80 border border-purple-200 text-[11px] text-purple-950">
+                    <Eye className="w-3 h-3 text-purple-600 shrink-0" />
+                    <div className="h-10 w-16 rounded overflow-hidden border border-purple-200 shrink-0">
+                      <img src={visualClueUrl} alt="Clue" className="w-full h-full object-cover" />
                     </div>
-                    <img
-                      src={visualClueUrl}
-                      alt="Vision Clue"
-                      className="rounded-lg max-h-36 w-full object-cover border border-purple-200"
-                    />
+                    <span className="text-[10px] text-purple-700 font-bold">Vision Clue Unlocked</span>
                   </div>
                 )}
               </div>
 
-              {/* 4 Combat Option Buttons - Single Column on Mobile */}
-              <div className="grid grid-cols-1 gap-2">
+              {/* 4 Combat Option Buttons - High Contrast, Compact, Non-scrollable */}
+              <div className="grid grid-cols-1 gap-1.5 shrink-0">
                 {[
                   { key: "A", text: currentQ.question.optionA },
                   { key: "B", text: currentQ.question.optionB },
@@ -852,7 +840,7 @@ export default function TeamTerminalPage() {
                       style = "bg-slate-50 border-slate-200 text-slate-400 opacity-50";
                     }
                   } else if (isLocked) {
-                    style = "bg-blue-600 border-blue-600 text-white font-bold shadow-sm shadow-blue-500/20";
+                    style = "bg-blue-600 border-blue-600 text-white font-bold shadow-sm";
                   } else if (isSelected) {
                     style = "bg-blue-50 border-blue-500 text-blue-900 font-semibold ring-1 ring-blue-500/30";
                   }
@@ -863,11 +851,11 @@ export default function TeamTerminalPage() {
                       type="button"
                       disabled={isEliminated || !!lockedAnswer || gameStatus !== "QUESTION_ACTIVE"}
                       onClick={() => setSelectedOption(opt.key)}
-                      className={`p-3.5 rounded-xl border text-left transition flex items-center justify-between text-xs sm:text-sm font-sans min-h-[48px] active:scale-[0.99] cursor-pointer ${style}`}
+                      className={`py-2 px-3 rounded-xl border text-left transition flex items-center justify-between text-xs font-sans min-h-[38px] active:scale-[0.99] cursor-pointer ${style}`}
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2.5 truncate">
                         <span
-                          className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${
+                          className={`w-6 h-6 rounded-md flex items-center justify-center font-bold text-xs shrink-0 ${
                             isCorrect || isLocked
                               ? "bg-white text-blue-700"
                               : isSelected
@@ -877,19 +865,19 @@ export default function TeamTerminalPage() {
                         >
                           {opt.key}
                         </span>
-                        <span className="leading-snug">{opt.text}</span>
+                        <span className="leading-tight truncate">{opt.text}</span>
                       </div>
 
                       {isLocked && (
-                        <div className="flex items-center gap-1 text-[11px] font-bold text-blue-100 uppercase shrink-0">
-                          <Lock className="w-3.5 h-3.5" />
+                        <div className="flex items-center gap-1 text-[10px] font-bold text-blue-100 uppercase shrink-0 ml-1">
+                          <Lock className="w-3 h-3" />
                           <span>Locked</span>
                         </div>
                       )}
 
                       {isCorrect && (
-                        <div className="flex items-center gap-1 text-[11px] font-bold text-white uppercase shrink-0">
-                          <CheckCircle2 className="w-3.5 h-3.5" />
+                        <div className="flex items-center gap-1 text-[10px] font-bold text-white uppercase shrink-0 ml-1">
+                          <CheckCircle2 className="w-3 h-3" />
                           <span>Correct</span>
                         </div>
                       )}
@@ -898,41 +886,49 @@ export default function TeamTerminalPage() {
                 })}
               </div>
 
-              {/* Lock Button */}
+              {/* Lock Button or Locked Confirmation Banner */}
               {!lockedAnswer && gameStatus === "QUESTION_ACTIVE" && (
                 <button
                   type="button"
                   disabled={!selectedOption || lockingIn}
                   onClick={() => setConfirmModal({ type: "answer", data: selectedOption })}
-                  className="w-full py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold text-xs uppercase tracking-wider disabled:opacity-40 shadow-sm shadow-blue-500/20 cursor-pointer flex items-center justify-center gap-2 min-h-[48px]"
+                  className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold text-xs uppercase tracking-wider disabled:opacity-40 shadow-xs cursor-pointer flex items-center justify-center gap-1.5 min-h-[40px] shrink-0"
                 >
                   <Lock className="w-3.5 h-3.5" />
-                  <span>Lock Answer [{selectedOption || "None"}]</span>
+                  <span>{selectedOption ? `Lock Answer [${selectedOption}]` : "Select an Option to Lock"}</span>
                 </button>
               )}
 
-              {/* Locked Notice */}
               {lockedAnswer && (
-                <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 text-xs flex items-center justify-between">
-                  <div className="flex items-center gap-2 font-medium">
-                    <CheckCircle2 className="w-4 h-4 text-blue-600" />
+                <div className="py-2 px-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 text-xs flex items-center justify-between shrink-0">
+                  <div className="flex items-center gap-1.5 font-medium">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
                     <span>Answer Locked: Option {lockedAnswer.selectedOption}</span>
                   </div>
-                  <span className="text-[11px] text-blue-600 font-semibold">Waiting for Reveal</span>
+                  <span className="text-[10px] text-blue-600 font-semibold">Waiting for Reveal</span>
+                </div>
+              )}
+
+              {/* Solution on Reveal */}
+              {gameStatus === "ANSWER_REVEAL" && currentQ.explanation && (
+                <div className="py-1.5 px-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-950 text-[11px] flex items-center gap-1.5 shrink-0">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span className="truncate"><strong>Solution:</strong> {currentQ.explanation}</span>
                 </div>
               )}
             </div>
           )}
 
-        {/* LIFELINES DRAWER */}
+        {/* LIFELINES 1-ROW BAR (ZERO SCROLLING) */}
         {gameStatus === "QUESTION_ACTIVE" && !hasPassed && !lockedAnswer && (
-          <div className="mt-2.5 pt-2.5 border-t border-slate-200">
-            <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500 mb-2">
+          <div className="pt-1.5 border-t border-slate-200 shrink-0">
+            <div className="flex items-center justify-between text-[10px] font-semibold text-slate-500 mb-1">
               <span>Tactical Lifelines</span>
-              <span className="text-blue-600">Balance: {(team?.currentBalance ?? 0).toLocaleString()} Coins</span>
+              <span className="text-blue-600 font-mono">Bal: {(team?.currentBalance ?? 0).toLocaleString()} C</span>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-4 gap-1.5">
+              {/* Hint */}
               <button
                 type="button"
                 disabled={lifelines?.BULLS_HINT?.purchased || (team?.currentBalance ?? 0) < 500}
@@ -942,18 +938,16 @@ export default function TeamTerminalPage() {
                     data: { type: "BULLS_HINT", cost: 500, title: "Bull's Hint" },
                   })
                 }
-                className="p-2.5 rounded-xl bg-white border border-slate-200 text-left hover:border-blue-300 hover:bg-blue-50/30 transition disabled:opacity-40 active:scale-[0.98]"
+                className="p-1.5 rounded-lg bg-white border border-slate-200 text-center hover:border-blue-300 hover:bg-blue-50/30 transition disabled:opacity-40 active:scale-[0.98] flex flex-col items-center justify-center cursor-pointer"
               >
-                <div className="flex items-center justify-between text-xs font-bold text-slate-800">
-                  <span className="flex items-center gap-1">
-                    <Lightbulb className="w-3.5 h-3.5 text-blue-600" />
-                    Hint
-                  </span>
-                  <span className="text-blue-600 font-mono text-[11px]">500 C</span>
+                <div className="flex items-center gap-1 text-[11px] font-bold text-slate-800">
+                  <Lightbulb className="w-3 h-3 text-blue-600" />
+                  <span>Hint</span>
                 </div>
-                <div className="text-[10px] text-slate-500 mt-0.5">Text clue</div>
+                <span className="text-[10px] text-blue-600 font-mono font-medium">500 C</span>
               </button>
 
+              {/* Vision */}
               <button
                 type="button"
                 disabled={lifelines?.VISION_BOOST?.purchased || (team?.currentBalance ?? 0) < 1500}
@@ -963,18 +957,16 @@ export default function TeamTerminalPage() {
                     data: { type: "VISION_BOOST", cost: 1500, title: "Vision Boost" },
                   })
                 }
-                className="p-2.5 rounded-xl bg-white border border-slate-200 text-left hover:border-blue-300 hover:bg-blue-50/30 transition disabled:opacity-40 active:scale-[0.98]"
+                className="p-1.5 rounded-lg bg-white border border-slate-200 text-center hover:border-blue-300 hover:bg-blue-50/30 transition disabled:opacity-40 active:scale-[0.98] flex flex-col items-center justify-center cursor-pointer"
               >
-                <div className="flex items-center justify-between text-xs font-bold text-slate-800">
-                  <span className="flex items-center gap-1">
-                    <Eye className="w-3.5 h-3.5 text-blue-600" />
-                    Vision
-                  </span>
-                  <span className="text-blue-600 font-mono text-[11px]">1,500 C</span>
+                <div className="flex items-center gap-1 text-[11px] font-bold text-slate-800">
+                  <Eye className="w-3 h-3 text-blue-600" />
+                  <span>Vision</span>
                 </div>
-                <div className="text-[10px] text-slate-500 mt-0.5">Visual clue</div>
+                <span className="text-[10px] text-blue-600 font-mono font-medium">1.5k C</span>
               </button>
 
+              {/* 50:50 */}
               <button
                 type="button"
                 disabled={lifelines?.["50_50_BLAST"]?.purchased || (team?.currentBalance ?? 0) < 2000}
@@ -984,15 +976,16 @@ export default function TeamTerminalPage() {
                     data: { type: "50_50_BLAST", cost: 2000, title: "50-50 Blast" },
                   })
                 }
-                className="p-2.5 rounded-xl bg-white border border-slate-200 text-left hover:border-blue-300 hover:bg-blue-50/30 transition disabled:opacity-40 active:scale-[0.98]"
+                className="p-1.5 rounded-lg bg-white border border-slate-200 text-center hover:border-blue-300 hover:bg-blue-50/30 transition disabled:opacity-40 active:scale-[0.98] flex flex-col items-center justify-center cursor-pointer"
               >
-                <div className="flex items-center justify-between text-xs font-bold text-slate-800">
-                  <span>50-50</span>
-                  <span className="text-blue-600 font-mono text-[11px]">2,000 C</span>
+                <div className="flex items-center gap-1 text-[11px] font-bold text-slate-800">
+                  <Zap className="w-3 h-3 text-amber-500" />
+                  <span>50:50</span>
                 </div>
-                <div className="text-[10px] text-slate-500 mt-0.5">Eliminate 2 wrong</div>
+                <span className="text-[10px] text-blue-600 font-mono font-medium">2k C</span>
               </button>
 
+              {/* Pass */}
               <button
                 type="button"
                 disabled={lifelines?.BULLS_PASS?.purchased || (team?.currentBalance ?? 0) < 2500}
@@ -1002,16 +995,13 @@ export default function TeamTerminalPage() {
                     data: { type: "BULLS_PASS", cost: 2500, title: "Bull's Pass" },
                   })
                 }
-                className="p-2.5 rounded-xl bg-white border border-slate-200 text-left hover:border-blue-300 hover:bg-blue-50/30 transition disabled:opacity-40 active:scale-[0.98]"
+                className="p-1.5 rounded-lg bg-white border border-slate-200 text-center hover:border-blue-300 hover:bg-blue-50/30 transition disabled:opacity-40 active:scale-[0.98] flex flex-col items-center justify-center cursor-pointer"
               >
-                <div className="flex items-center justify-between text-xs font-bold text-slate-800">
-                  <span className="flex items-center gap-1">
-                    <FastForward className="w-3.5 h-3.5 text-blue-600" />
-                    Pass
-                  </span>
-                  <span className="text-blue-600 font-mono text-[11px]">2,500 C</span>
+                <div className="flex items-center gap-1 text-[11px] font-bold text-slate-800">
+                  <FastForward className="w-3 h-3 text-emerald-600" />
+                  <span>Pass</span>
                 </div>
-                <div className="text-[10px] text-slate-500 mt-0.5">Skip safely</div>
+                <span className="text-[10px] text-blue-600 font-mono font-medium">2.5k C</span>
               </button>
             </div>
           </div>

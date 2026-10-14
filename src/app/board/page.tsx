@@ -339,11 +339,11 @@ export default function SmartBoardPage() {
   const timerFormatted = `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col justify-between select-none font-sans overflow-x-hidden selection:bg-blue-600 selection:text-white">
+    <div className="h-screen max-h-screen overflow-hidden bg-slate-50 text-slate-900 flex flex-col justify-between select-none font-sans selection:bg-blue-600 selection:text-white">
       {/* ========================================================= */}
       {/* TOP SMART BOARD HEADER & PRESENTER BAR */}
       {/* ========================================================= */}
-      <header className="border-b border-slate-200/80 bg-white px-4 sm:px-6 py-3 flex items-center justify-between shadow-2xs gap-3">
+      <header className="border-b border-slate-200/80 bg-white px-4 sm:px-6 py-3 flex items-center justify-between shadow-2xs gap-3 shrink-0">
         <div className="flex items-center gap-3">
           <BullLogo size="sm" />
           <span className="text-slate-300 hidden sm:inline">//</span>
@@ -545,7 +545,7 @@ export default function SmartBoardPage() {
       {/* ========================================================= */}
       {/* MAIN PRESENTATION STAGE */}
       {/* ========================================================= */}
-      <main className="flex-1 max-w-[1500px] mx-auto w-full p-4 sm:p-8 flex flex-col justify-center">
+      <main className="flex-1 max-w-[1500px] mx-auto w-full p-4 sm:p-6 lg:p-7 flex flex-col justify-center overflow-hidden">
         {/* LOBBY / READY VIEW */}
         {(status === "LOBBY" || status === "READY") && (
           <div className="flex flex-col lg:flex-row items-center justify-between gap-10 my-auto">
@@ -612,17 +612,17 @@ export default function SmartBoardPage() {
           </div>
         )}
 
-        {/* ACTIVE QUESTION SCREEN */}
+        {/* ACTIVE QUESTION SCREEN - PRISTINE BROADCAST VIEW */}
         {(status === "QUESTION_ACTIVE" ||
           status === "QUESTION_PAUSED" ||
           status === "QUESTION_CLOSED" ||
           status === "ANSWER_REVEAL") &&
           currentQ && (
-            <div className="flex flex-col gap-6 w-full my-auto">
+            <div className="flex flex-col justify-between h-full w-full py-1 gap-4">
               {/* Telemetry Header */}
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-slate-200 pb-5">
+              <div className="flex items-center justify-between border-b border-slate-200 pb-3 shrink-0">
                 <div className="flex items-center gap-3">
-                  <span className="px-3.5 py-1.5 rounded-full bg-blue-600 text-white font-black text-sm uppercase shadow-xs">
+                  <span className="px-3.5 py-1.5 rounded-full bg-blue-600 text-white font-black text-xs sm:text-sm uppercase shadow-xs">
                     Round {(gameState?.currentQuestionIndex || 0) + 1} of {gameState?.totalQuestions}
                   </span>
                   <span className="px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 uppercase">
@@ -632,7 +632,7 @@ export default function SmartBoardPage() {
 
                 {/* Massive 5-Minute Countdown Clock */}
                 <div
-                  className={`flex items-center gap-3 px-8 py-3 rounded-2xl border-2 font-mono font-black text-5xl sm:text-6xl shadow-sm ${
+                  className={`flex items-center gap-3 px-6 sm:px-8 py-2 rounded-2xl border-2 font-mono font-black text-4xl sm:text-5xl shadow-xs ${
                     remainingSeconds <= 15
                       ? "bg-red-50 border-red-400 text-red-600 animate-pulse"
                       : remainingSeconds <= 45
@@ -640,7 +640,7 @@ export default function SmartBoardPage() {
                       : "bg-blue-50 border-blue-200 text-blue-800"
                   }`}
                 >
-                  <Clock className="w-10 h-10 shrink-0 text-current" />
+                  <Clock className="w-8 h-8 sm:w-9 sm:h-9 shrink-0 text-current" />
                   <span>{timerFormatted}</span>
                   {isPaused && (
                     <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded ml-2">
@@ -652,7 +652,7 @@ export default function SmartBoardPage() {
 
               {/* Auto-Advance Notification Banner */}
               {autoAdvanceCountdown !== null && (
-                <div className="p-4 rounded-2xl bg-blue-50 border border-blue-200 text-blue-900 flex items-center justify-between gap-4 animate-in fade-in">
+                <div className="p-3 sm:p-4 rounded-2xl bg-blue-50 border border-blue-200 text-blue-900 flex items-center justify-between gap-4 animate-in fade-in shrink-0">
                   <div className="flex items-center gap-2 font-bold text-sm">
                     <Sparkles className="w-5 h-5 text-blue-600 shrink-0" />
                     <span>
@@ -675,40 +675,62 @@ export default function SmartBoardPage() {
                 </div>
               )}
 
-              {/* Question Statement & Submissions Gauge */}
-              <div className="flex flex-col lg:flex-row items-start justify-between gap-6">
-                <div className="flex-1 space-y-4">
-                  <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 leading-tight tracking-tight">
+              {/* Question Statement & Side Media/Stats */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center flex-1 min-h-0 overflow-hidden py-1">
+                {/* Left Column: Question text */}
+                <div className={`${currentQ.question.imageUrl ? "lg:col-span-8" : "lg:col-span-9"} flex flex-col justify-center`}>
+                  <h2 className="text-2xl sm:text-3xl lg:text-4xl xl:text-[42px] font-black text-slate-900 leading-snug tracking-tight">
                     {currentQ.question.text}
                   </h2>
+                </div>
 
+                {/* Right Column: Visual Frame and Submissions Gauge */}
+                <div className={`${currentQ.question.imageUrl ? "lg:col-span-4" : "lg:col-span-3"} flex flex-col gap-3 shrink-0`}>
                   {currentQ.question.imageUrl && (
-                    <div className="rounded-2xl overflow-hidden border border-slate-200 max-h-72 w-full max-w-xl bg-slate-100 shadow-xs">
+                    <div className="w-full aspect-video rounded-2xl overflow-hidden border-2 border-slate-200/90 shadow-sm bg-slate-100 max-h-48">
                       <img
                         src={currentQ.question.imageUrl}
-                        alt="Question Reference"
+                        alt="Question Visual Reference"
                         className="w-full h-full object-cover"
                       />
                     </div>
                   )}
-                </div>
 
-                {/* Response Gauge */}
-                <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-sm flex flex-col items-center justify-center min-w-[240px] text-center">
-                  <div className="text-[11px] text-slate-500 uppercase font-bold tracking-wider">
-                    Locked Submissions
-                  </div>
-                  <div className="text-4xl font-black text-blue-600 mt-1">
-                    {answerCount.answeredCount} / {answerCount.totalCount || gameState?.totalTeamsCount || 8}
-                  </div>
-                  <div className="text-[11px] text-slate-400 mt-2 font-medium">
-                    Anonymous Server Verification
+                  {/* Submissions Gauge */}
+                  <div className="w-full p-3.5 sm:p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-around text-center">
+                    <div>
+                      <div className="text-[10px] sm:text-[11px] text-slate-500 uppercase font-bold tracking-wider">
+                        Locked Submissions
+                      </div>
+                      <div className="text-2xl sm:text-3xl font-black text-blue-600 mt-0.5">
+                        {answerCount.answeredCount} / {answerCount.totalCount || gameState?.totalTeamsCount || 8}
+                      </div>
+                    </div>
+                    <div className="h-8 w-px bg-slate-200" />
+                    <div className="text-[10px] sm:text-[11px] text-slate-400 font-semibold uppercase">
+                      Live Verified
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* 4 Crisp Options */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+              {/* Solution Reveal Box */}
+              {status === "ANSWER_REVEAL" && (
+                <div className="py-2.5 px-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-950 flex items-center gap-3 shrink-0 animate-in fade-in">
+                  <Sparkles className="w-5 h-5 text-emerald-600 shrink-0" />
+                  <div className="truncate">
+                    <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 mr-2">
+                      Solution Explanation:
+                    </span>
+                    <span className="text-sm text-slate-800 font-medium">
+                      {currentQ.explanation || revealData?.explanation || "Solution revealed. Standings recalculated."}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* 4 Crisp Options in 2x2 Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 shrink-0">
                 {[
                   { key: "A", text: currentQ.question.optionA },
                   { key: "B", text: currentQ.question.optionB },
@@ -722,27 +744,27 @@ export default function SmartBoardPage() {
                   let cardStyle = "bg-white border-slate-200 text-slate-900";
                   if (isReveal) {
                     if (isCorrect) {
-                      cardStyle = "bg-emerald-600 border-emerald-600 text-white font-bold shadow-md";
+                      cardStyle = "bg-emerald-600 border-emerald-600 text-white font-bold shadow-md scale-[1.01]";
                     } else {
-                      cardStyle = "bg-slate-50 border-slate-200 text-slate-400 opacity-50";
+                      cardStyle = "bg-slate-50 border-slate-200 text-slate-400 opacity-40";
                     }
                   }
 
                   return (
                     <div
                       key={opt.key}
-                      className={`p-5 sm:p-6 rounded-2xl border-2 flex items-center gap-5 transition-all shadow-xs ${cardStyle}`}
+                      className={`p-4 sm:p-5 rounded-2xl border-2 flex items-center gap-4 transition-all shadow-xs ${cardStyle}`}
                     >
                       <div
-                        className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl font-black shrink-0 ${
+                        className={`w-11 h-11 rounded-xl flex items-center justify-center text-lg font-black shrink-0 ${
                           isCorrect
-                            ? "bg-white text-emerald-700"
+                            ? "bg-white text-emerald-700 shadow-sm"
                             : "bg-blue-50 text-blue-700 border border-blue-200"
                         }`}
                       >
                         {opt.key}
                       </div>
-                      <div className="text-xl sm:text-2xl font-bold leading-snug">
+                      <div className="text-lg sm:text-xl font-bold leading-snug">
                         {opt.text}
                       </div>
                       {isCorrect && (
@@ -755,21 +777,6 @@ export default function SmartBoardPage() {
                   );
                 })}
               </div>
-
-              {/* Solution Reveal Box */}
-              {status === "ANSWER_REVEAL" && (
-                <div className="p-6 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-950 flex items-start gap-4">
-                  <Sparkles className="w-6 h-6 text-emerald-600 shrink-0 mt-0.5" />
-                  <div>
-                    <div className="text-xs font-bold uppercase tracking-wider text-emerald-800">
-                      Solution Explanation
-                    </div>
-                    <p className="mt-1 text-base text-slate-800 leading-relaxed font-medium">
-                      {currentQ.explanation || revealData?.explanation || "Solution revealed. Standings recalculated."}
-                    </p>
-                  </div>
-                </div>
-              )}
             </div>
           )}
 
