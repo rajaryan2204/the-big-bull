@@ -1,5 +1,3 @@
-// THE BIG BULL - Prisma Database Schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -19,31 +17,30 @@ model Admin {
 }
 
 model Team {
-  id                  String               @id @default(cuid())
-  teamCode            String               @unique // e.g. BULLS-101
-  name                String
-  members             String[]             @default([])
-  accessCodeHash      String               // bcrypt hash of the secret access code
-  startingBalance     Int                  @default(5000)
-  currentBalance      Int                  @default(5000)
-  score               Int                  @default(0)
-  correctAnswers      Int                  @default(0)
-  attemptedQuestions  Int                  @default(0)
-  strikesCount        Int                  @default(0)
-  isDisqualified      Boolean              @default(false)
-  isActive            Boolean              @default(true)
-  isDisabled          Boolean              @default(false)
-  connectionStatus    String               @default("DISCONNECTED") // CONNECTED, DISCONNECTED
-  lastSeenAt          DateTime?
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
-
-  sessions            TeamSession[]
-  answers             TeamAnswer[]
-  lifelines           LifelinePurchase[]
-  coinTransactions    CoinTransaction[]
-  auditLogs           AuditLog[]
-  suspiciousEvents    SuspiciousActivity[]
+  id                 String               @id @default(cuid())
+  teamCode           String               @unique
+  name               String
+  accessCodeHash     String
+  startingBalance    Int                  @default(5000)
+  currentBalance     Int                  @default(5000)
+  score              Int                  @default(0)
+  correctAnswers     Int                  @default(0)
+  attemptedQuestions Int                  @default(0)
+  isActive           Boolean              @default(true)
+  isDisabled         Boolean              @default(false)
+  connectionStatus   String               @default("DISCONNECTED")
+  lastSeenAt         DateTime?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  members            String[]             @default([])
+  isDisqualified     Boolean              @default(false)
+  strikesCount       Int                  @default(0)
+  auditLogs          AuditLog[]
+  coinTransactions   CoinTransaction[]
+  lifelines          LifelinePurchase[]
+  suspiciousEvents   SuspiciousActivity[]
+  answers            TeamAnswer[]
+  sessions           TeamSession[]
 
   @@index([teamCode])
   @@index([isDisabled])
@@ -59,7 +56,6 @@ model TeamSession {
   expiresAt    DateTime
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
-
   team         Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   @@index([teamId])
@@ -67,49 +63,47 @@ model TeamSession {
 }
 
 model Game {
-  id                      String               @id @default(cuid())
-  title                   String               @default("THE BIG BULL Championship")
-  status                  String               @default("LOBBY") // LOBBY, READY, QUESTION_ACTIVE, QUESTION_PAUSED, QUESTION_CLOSED, ANSWER_REVEAL, LEADERBOARD, FINISHED
-  currentQuestionIndex    Int                  @default(0)
-  correctReward           Int                  @default(1000)
-  incorrectPenalty        Int                  @default(200)
-  unansweredPenalty       Int                  @default(0)
-  defaultQuestionDuration Int                  @default(300) // 5 minutes in seconds
-  oneActiveSessionPerTeam Boolean              @default(true)
-  examMode                Boolean              @default(false)
-  allowAnswerChange       Boolean              @default(false)
-  allowRepeatLifelines    Boolean              @default(false)
-  publicLeaderboardColumns String              @default("rank,name,score,coins,correct")
-  createdAt               DateTime             @default(now())
-  updatedAt               DateTime             @updatedAt
-
-  gameQuestions           GameQuestion[]
-  answers                 TeamAnswer[]
-  lifelines               LifelinePurchase[]
-  coinTransactions        CoinTransaction[]
-  auditLogs               AuditLog[]
-  suspiciousEvents        SuspiciousActivity[]
+  id                       String               @id @default(cuid())
+  title                    String               @default("THE BIG BULL Championship")
+  status                   String               @default("LOBBY")
+  currentQuestionIndex     Int                  @default(0)
+  correctReward            Int                  @default(1000)
+  incorrectPenalty         Int                  @default(200)
+  unansweredPenalty        Int                  @default(0)
+  defaultQuestionDuration  Int                  @default(300)
+  oneActiveSessionPerTeam  Boolean              @default(true)
+  examMode                 Boolean              @default(false)
+  allowAnswerChange        Boolean              @default(false)
+  allowRepeatLifelines     Boolean              @default(false)
+  publicLeaderboardColumns String               @default("rank,name,score,coins,correct")
+  createdAt                DateTime             @default(now())
+  updatedAt                DateTime             @updatedAt
+  auditLogs                AuditLog[]
+  coinTransactions         CoinTransaction[]
+  gameQuestions            GameQuestion[]
+  lifelines                LifelinePurchase[]
+  suspiciousEvents         SuspiciousActivity[]
+  answers                  TeamAnswer[]
 }
 
 model Question {
   id              String         @id @default(cuid())
   text            String
-  category        String         // General Knowledge, Space, Basic Technical Concepts, Science and Technology, Logical Thinking
+  category        String
   optionA         String
   optionB         String
   optionC         String
   optionD         String
-  correctOption   String         // A, B, C, D
+  correctOption   String
   imageUrl        String?
-  visualClueUrl   String?        // Private image clue for Vision Boost
-  hintText        String?        // Private text clue for Bull's Hint
-  explanation     String?        // Reveal phase explanation
-  difficulty      String         @default("MEDIUM") // EASY, MEDIUM, HARD
+  visualClueUrl   String?
+  hintText        String?
+  explanation     String?
+  difficulty      String         @default("MEDIUM")
   durationSeconds Int            @default(300)
   isActive        Boolean        @default(true)
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
-
   gameQuestions   GameQuestion[]
 
   @@index([category])
@@ -121,18 +115,17 @@ model GameQuestion {
   questionId       String
   orderIndex       Int
   durationSeconds  Int                @default(300)
-  status           String             @default("PENDING") // PENDING, ACTIVE, PAUSED, CLOSED, REVEALED
+  status           String             @default("PENDING")
   openedAt         DateTime?
   deadline         DateTime?
   closedAt         DateTime?
-  remainingOnPause Int?               // Milliseconds remaining when paused
+  remainingOnPause Int?
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
-
   game             Game               @relation(fields: [gameId], references: [id], onDelete: Cascade)
   question         Question           @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  answers          TeamAnswer[]
   lifelines        LifelinePurchase[]
+  answers          TeamAnswer[]
 
   @@unique([gameId, orderIndex])
   @@unique([gameId, questionId])
@@ -145,13 +138,12 @@ model TeamAnswer {
   gameId           String
   gameQuestionId   String
   teamId           String
-  selectedOption   String       // A, B, C, D
+  selectedOption   String
   isCorrect        Boolean?
   isLocked         Boolean      @default(true)
   pointsAwarded    Int          @default(0)
   timeTakenSeconds Float?
   submittedAt      DateTime     @default(now())
-
   game             Game         @relation(fields: [gameId], references: [id], onDelete: Cascade)
   gameQuestion     GameQuestion @relation(fields: [gameQuestionId], references: [id], onDelete: Cascade)
   team             Team         @relation(fields: [teamId], references: [id], onDelete: Cascade)
@@ -166,12 +158,11 @@ model LifelinePurchase {
   gameId         String
   gameQuestionId String
   teamId         String
-  lifelineType   String       // BULLS_HINT, VISION_BOOST, 50_50_BLAST, BULLS_PASS
+  lifelineType   String
   cost           Int
-  details        String?      // JSON string of result e.g. eliminated options or hint text
+  details        String?
   idempotencyKey String       @unique
   purchasedAt    DateTime     @default(now())
-
   game           Game         @relation(fields: [gameId], references: [id], onDelete: Cascade)
   gameQuestion   GameQuestion @relation(fields: [gameQuestionId], references: [id], onDelete: Cascade)
   team           Team         @relation(fields: [teamId], references: [id], onDelete: Cascade)
@@ -185,17 +176,16 @@ model CoinTransaction {
   id                String   @id @default(cuid())
   gameId            String?
   teamId            String
-  transactionType   String   // STARTING_BALANCE, LIFELINE_PURCHASE, ADMIN_ADJUSTMENT, REWARD
-  amount            Int      // Negative for deduction, positive for addition
+  transactionType   String
+  amount            Int
   previousBalance   Int
   newBalance        Int
   relatedQuestionId String?
   eventDetails      String?
   idempotencyKey    String?  @unique
   createdAt         DateTime @default(now())
-
-  team              Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
   game              Game?    @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  team              Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   @@index([teamId])
   @@index([gameId])
@@ -205,14 +195,13 @@ model AuditLog {
   id        String   @id @default(cuid())
   gameId    String?
   teamId    String?
-  action    String   // GAME_START, QUESTION_OPENED, ANSWER_SUBMITTED, LIFELINE_PURCHASED, etc.
-  actor     String   // ADMIN, TEAM, SYSTEM
+  action    String
+  actor     String
   ipAddress String?
   details   String?
   createdAt DateTime @default(now())
-
-  team      Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
   game      Game?    @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  team      Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   @@index([gameId])
   @@index([teamId])
@@ -223,14 +212,13 @@ model SuspiciousActivity {
   id          String   @id @default(cuid())
   gameId      String?
   teamId      String
-  eventType   String   // TAB_SWITCH, WINDOW_BLUR, MULTIPLE_SESSIONS, etc.
+  eventType   String
   description String
   metadata    String?
   flagCount   Int      @default(1)
   createdAt   DateTime @default(now())
-
-  team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
   game        Game?    @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  team        Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
 
   @@index([teamId])
   @@index([gameId])

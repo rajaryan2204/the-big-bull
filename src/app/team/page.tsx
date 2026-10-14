@@ -94,6 +94,7 @@ export default function TeamTerminalPage() {
     type: "answer" | "lifeline";
     data?: any;
   } | null>(null);
+  const [showClueModal, setShowClueModal] = useState<boolean>(false);
 
   const socketRef = useRef<any>(null);
   const lastIncidentTimeRef = useRef<number>(0);
@@ -1204,13 +1205,22 @@ export default function TeamTerminalPage() {
                 )}
 
                 {visualClueUrl && (
-                  <div className="flex items-center gap-2 p-1.5 rounded-lg bg-purple-50/80 border border-purple-200 text-[11px] text-purple-950">
-                    <Eye className="w-3 h-3 text-purple-600 shrink-0" />
-                    <div className="h-10 w-16 rounded overflow-hidden border border-purple-200 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setShowClueModal(true)}
+                    className="w-full flex items-center justify-between p-1.5 rounded-lg bg-purple-50 hover:bg-purple-100/80 border border-purple-200 text-purple-950 transition cursor-pointer text-left shrink-0"
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <Eye className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                      <div>
+                        <div className="text-[11px] font-bold text-purple-900 leading-tight">Vision Boost Clue</div>
+                        <div className="text-[9px] text-purple-600 font-medium">Tap to view full diagram</div>
+                      </div>
+                    </div>
+                    <div className="h-7 w-12 rounded overflow-hidden border border-purple-300 shrink-0 bg-slate-900">
                       <img src={visualClueUrl} alt="Clue" className="w-full h-full object-cover" />
                     </div>
-                    <span className="text-[10px] text-purple-700 font-bold">Vision Clue Unlocked</span>
-                  </div>
+                  </button>
                 )}
               </div>
 
@@ -1488,6 +1498,40 @@ export default function TeamTerminalPage() {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Vision Clue Full Image Modal */}
+      {showClueModal && visualClueUrl && (
+        <div
+          className="fixed inset-0 bg-slate-900/80 backdrop-blur-xs z-50 flex items-center justify-center p-3 animate-in fade-in"
+          onClick={() => setShowClueModal(false)}
+        >
+          <div
+            className="bg-slate-950 border border-slate-700 rounded-2xl max-w-md w-full p-4 relative shadow-2xl flex flex-col items-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-full flex items-center justify-between pb-2.5 border-b border-slate-800">
+              <span className="text-xs font-bold text-purple-400 flex items-center gap-1.5">
+                <Eye className="w-4 h-4 text-purple-400" /> Vision Boost Diagram Clue
+              </span>
+              <button
+                onClick={() => setShowClueModal(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg bg-slate-800 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="w-full mt-3 rounded-xl overflow-hidden border border-slate-800 bg-slate-900 flex items-center justify-center">
+              <img src={visualClueUrl} alt="Vision Clue Diagram" className="w-full h-auto max-h-[60vh] object-contain" />
+            </div>
+            <button
+              onClick={() => setShowClueModal(false)}
+              className="mt-3.5 w-full py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs cursor-pointer shadow-md shadow-purple-600/30"
+            >
+              Done / Return to Combat
+            </button>
           </div>
         </div>
       )}
