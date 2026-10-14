@@ -120,6 +120,7 @@ export default function StudentParticipantPortal() {
       <IncognitoBarrier
         browserName={browserName}
         onRecheck={checkIncognitoStatus}
+        onBypass={() => setIsIncognito(true)}
         isChecking={checkingIncognito}
       />
     );

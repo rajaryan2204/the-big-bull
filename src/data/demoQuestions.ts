@@ -28,11 +28,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "Venus",
     "optionD": "Jupiter",
     "correctOption": "C",
-    "visualClueUrl": "/clues/q01.svg",
+    "imageUrl": "/images/questions/q01.jpg",
+    "visualClueUrl": "/images/questions/q01.jpg",
     "hintText": "This inner terrestrial planet has an extremely slow retrograde spin: one rotation on its axis takes approximately 243 Earth days—longer than its own year!",
     "explanation": "Venus rotates very slowly in a retrograde (clockwise) direction, taking roughly 243 Earth days to complete a single sidereal rotation on its axis. In comparison, Earth takes 24h, Mars 24.6h, and Jupiter just ~9.9h.",
     "difficulty": "EASY",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-02",
@@ -44,11 +45,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "Nitrogen prevents all moisture from entering permanently",
     "optionD": "Nitrogen chemically strengthens the packet",
     "correctOption": "B",
-    "visualClueUrl": "/clues/q02.svg",
+    "imageUrl": "/images/questions/q02.jpg",
+    "visualClueUrl": "/images/questions/q02.jpg",
     "hintText": "Fried food oils react readily with atmospheric oxygen in a degradation process known as lipid oxidation (rancidity). Nitrogen is an unreactive inert gas that displaces oxygen.",
     "explanation": "Nitrogen gas is chemically unreactive and acts as a protective blanket by displacing oxygen gas. Without oxygen, the vegetable oils in the chips cannot oxidize, preventing rancidity and preserving flavor and crispness.",
     "difficulty": "EASY",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-03",
@@ -60,11 +62,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "Gallium and aluminium",
     "optionD": "Caesium and iron",
     "correctOption": "A",
-    "visualClueUrl": "/clues/q03.svg",
+    "imageUrl": "/images/questions/q03.jpg",
+    "visualClueUrl": "/images/questions/q03.jpg",
     "hintText": "One is standard liquid metal Hg (-38.8°C melting point). The other is element Ga, which melts at just 29.8°C—liquefying when held in your hand near room temperature.",
     "explanation": "Mercury (Hg) is famously liquid at standard room temperature (melting point -38.83°C). Gallium (Ga) has a remarkably low melting point of 29.76°C, easily liquefying near warm room temperature or body temperature.",
     "difficulty": "EASY",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-04",
@@ -76,11 +79,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "Both, because their temperatures are equal",
     "optionD": "Copper, because its temperature is always lower",
     "correctOption": "B",
-    "visualClueUrl": "/clues/q04.svg",
+    "imageUrl": "/images/questions/q04.jpg",
+    "visualClueUrl": "/images/questions/q04.jpg",
     "hintText": "Human skin senses the rate of thermal energy transfer (Fourier's law of conduction), not temperature itself. Copper's thermal conductivity (~400 W/m·K) is ~25× higher than stainless steel (~15 W/m·K).",
     "explanation": "Both spoons sit at identical ambient room temperature (~22°C), below body temperature (~37°C). Because copper has a much higher thermal conductivity (k ≈ 400 W/m·K vs k ≈ 15 W/m·K for stainless steel), it draws heat away from skin much faster, triggering cold thermoreceptors.",
     "difficulty": "EASY",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-05",
@@ -92,11 +96,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "The Moon's phases depend on how much of its sunlit side we can see from Earth",
     "optionD": "A lunar eclipse occurs every full moon",
     "correctOption": "C",
-    "visualClueUrl": "/clues/q05.svg",
+    "imageUrl": "/images/questions/q05.jpg",
+    "visualClueUrl": "/images/questions/q05.jpg",
     "hintText": "Exactly 50% of the Moon's spherical surface is illuminated by sunlight at all times. As the Moon orbits Earth, our geometric vantage point changes the visible portion of that sunlit hemisphere.",
     "explanation": "At all times, half of the Moon is illuminated by solar rays. Lunar phases are an optical geometry effect: as the Moon orbits Earth, observers on Earth see differing portions of that illuminated half (from New Moon to Full Moon).",
     "difficulty": "EASY",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-06",
@@ -108,11 +113,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "The number of atoms in it",
     "optionD": "The number of protons in each atom",
     "correctOption": "B",
-    "visualClueUrl": "/clues/q06.svg",
+    "imageUrl": "/images/questions/q06.jpg",
+    "visualClueUrl": "/images/questions/q06.jpg",
     "hintText": "Thermodynamic temperature is the macroscopic physical measurement of microscopic particle motion: KE_avg = (3/2) k_B T.",
     "explanation": "By thermodynamic definition, absolute temperature is directly proportional to the average kinetic energy of the constituent atoms/molecules. Heating increases particle thermal vibrations without altering atomic numbers, mass, or chemical identities.",
     "difficulty": "EASY",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-07",
@@ -124,11 +130,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "Nickel prevents every possible chemical reaction",
     "optionD": "Stainless steel cannot react with oxygen",
     "correctOption": "B",
-    "visualClueUrl": "/clues/q07.svg",
+    "imageUrl": "/images/questions/q07.jpg",
+    "visualClueUrl": "/images/questions/q07.jpg",
     "hintText": "Stainless steel contains a minimum of 10.5% of this alloying element, which spontaneously reacts with oxygen to form a microscopic, self-healing passive oxide film.",
     "explanation": "Stainless steel contains at least 10.5% Chromium (Cr). In atmospheric oxygen, chromium rapidly oxidizes to form an invisible, self-healing, passivating film of chromium oxide (Cr2O3) just nanometers thick, shielding the iron from rusting.",
     "difficulty": "MEDIUM",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-08",
@@ -140,11 +147,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "Voltage can increase while current decreases; output power cannot exceed input power in an ideal transformer",
     "optionD": "Voltage and current must always remain unchanged",
     "correctOption": "C",
-    "visualClueUrl": "/clues/q08.svg",
+    "imageUrl": "/images/questions/q08.jpg",
+    "visualClueUrl": "/images/questions/q08.jpg",
     "hintText": "Recall the foundational Conservation of Energy law: Power = Voltage × Current. In an ideal transformer, P_in = P_out (V_p · I_p = V_s · I_s).",
     "explanation": "Energy conservation dictates that a passive device cannot output more power than it inputs. In a step-up transformer, as secondary voltage increases, secondary current decreases proportionally (P = V·I is conserved, minus small efficiency losses).",
     "difficulty": "MEDIUM",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-09",
@@ -156,11 +164,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "The satellite is held up by Earth's atmosphere",
     "optionD": "The satellite stops moving at the highest point of its orbit",
     "correctOption": "B",
-    "visualClueUrl": "/clues/q09.svg",
+    "imageUrl": "/images/questions/q09.jpg",
+    "visualClueUrl": "/images/questions/q09.jpg",
     "hintText": "Recall Newton's classic orbital cannonball thought experiment: orbital velocity v ≈ 7.8 km/s ensures Earth's surface curves away at the same rate the object falls under gravity.",
     "explanation": "Earth's gravitational field still exerts ~90% of surface gravity at Low Earth Orbit. An orbiting satellite is in continuous free-fall, but its high tangential velocity causes the spherical surface of Earth to curve away beneath it at the exact same rate it falls.",
     "difficulty": "MEDIUM",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-10",
@@ -172,11 +181,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "It becomes 100 times as large",
     "optionD": "It becomes 1,000 times as large",
     "correctOption": "C",
-    "visualClueUrl": "/clues/q10.svg",
+    "imageUrl": "/images/questions/q10.jpg",
+    "visualClueUrl": "/images/questions/q10.jpg",
     "hintText": "pH is a negative base-10 logarithmic scale: pH = -log10[H+]. Every step of 1 pH unit represents a 10× change in concentration.",
     "explanation": "Because pH = -log10[H+], [H+] = 10^(-pH). At pH 6, [H+] = 10^-6 M; at pH 4, [H+] = 10^-4 M. The ratio is 10^-4 / 10^-6 = 10^2 = 100 times higher hydrogen-ion concentration.",
     "difficulty": "MEDIUM",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-11",
@@ -188,11 +198,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "Mercury receives less sunlight than Venus",
     "optionD": "Venus rotates faster than Mercury",
     "correctOption": "B",
-    "visualClueUrl": "/clues/q11.svg",
+    "imageUrl": "/images/questions/q11.jpg",
+    "visualClueUrl": "/images/questions/q11.jpg",
     "hintText": "Venus has a thick atmosphere with 92× Earth's surface pressure, composed of 96.5% CO2, trapping incoming infrared thermal radiation.",
     "explanation": "Venus is enveloped by a massive, super-dense atmosphere composed of 96.5% carbon dioxide and sulfuric acid cloud decks. This creates a runaway greenhouse effect, trapping solar heat and raising surface temperatures to an oven-like ~465°C, hotter than Mercury.",
     "difficulty": "MEDIUM",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-12",
@@ -204,11 +215,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "Both fall with the same acceleration",
     "optionD": "The heavier object reaches terminal velocity first",
     "correctOption": "C",
-    "visualClueUrl": "/clues/q12.svg",
+    "imageUrl": "/images/questions/q12.jpg",
+    "visualClueUrl": "/images/questions/q12.jpg",
     "hintText": "Apply Newton's second law F = m·a and gravitational force F = G·M·m / r². The mass 'm' of the falling body cancels out identically on both sides of the equation.",
     "explanation": "In a vacuum where air resistance is zero, gravitational acceleration is given by a = F_grav / m = (G·M_earth) / r² = g. Because gravitational mass equals inertial mass, all bodies accelerate downward at the exact same rate (~9.8 m/s²), as famously demonstrated by Galileo and Apollo 15.",
     "difficulty": "MEDIUM",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-13",
@@ -220,11 +232,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "It permanently shifts every chemical equilibrium towards products",
     "optionD": "It increases the amount of reactants without being consumed",
     "correctOption": "B",
-    "visualClueUrl": "/clues/q13.svg",
+    "imageUrl": "/images/questions/q13.jpg",
+    "visualClueUrl": "/images/questions/q13.jpg",
     "hintText": "Catalysts provide an alternative reaction pathway with a lower potential energy barrier (E_a) without being permanently consumed or altering ΔG.",
     "explanation": "A catalyst accelerates chemical kinetics by providing an alternate reaction pathway with a lower activation energy (E_a). It is regenerated during the catalytic cycle and does not alter equilibrium position (K_eq) or reaction free energy (ΔG).",
     "difficulty": "MEDIUM",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-14",
@@ -236,11 +249,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "Glass cannot refract visible light",
     "optionD": "Diamond reflects every ray from every angle",
     "correctOption": "B",
-    "visualClueUrl": "/clues/q14.svg",
+    "imageUrl": "/images/questions/q14.jpg",
+    "visualClueUrl": "/images/questions/q14.jpg",
     "hintText": "Diamond has a remarkably high refractive index (n ≈ 2.42), which makes its critical angle for Total Internal Reflection (TIR) exceptionally small (θ_c ≈ 24.4°).",
     "explanation": "Diamond has a high refractive index (n ≈ 2.42 vs ~1.5 for glass), producing a tiny critical angle (sin θ_c = 1/n ≈ 24.4°). Light entering the diamond undergoes multiple total internal reflections before exiting through the top facets, producing brilliant scintillation and dispersion.",
     "difficulty": "MEDIUM",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-15",
@@ -252,11 +266,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "The current in every overhead wire is zero",
     "optionD": "Birds are naturally insulated against every voltage",
     "correctOption": "B",
-    "visualClueUrl": "/clues/q15.svg",
+    "imageUrl": "/images/questions/q15.jpg",
+    "visualClueUrl": "/images/questions/q15.jpg",
     "hintText": "Ohm's law states that current requires an electric potential difference (ΔV = V1 - V2). Both feet touch the same low-resistance wire just inches apart.",
     "explanation": "Electrocution requires current to flow through the body (I = ΔV/R). Because both of the bird's feet grip the same conductor a few centimeters apart, the potential difference between its feet (ΔV) is practically zero, so negligible current diverts into its body.",
     "difficulty": "MEDIUM",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-16",
@@ -268,11 +283,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "The planets orbit the Sun",
     "optionD": "The Moon is moving away from Earth",
     "correctOption": "B",
-    "visualClueUrl": "/clues/q16.svg",
+    "imageUrl": "/images/questions/q16.jpg",
+    "visualClueUrl": "/images/questions/q16.jpg",
     "hintText": "Discovered by Edwin Hubble in 1929: spectral absorption lines of distant galaxies are shifted toward longer, red wavelengths proportionally to their distance.",
     "explanation": "Cosmological redshift occurs because the metric of space itself is expanding as photons travel toward Earth. This stretches light to longer wavelengths, shifting absorption lines toward the red end of the electromagnetic spectrum, confirming universal cosmic expansion.",
     "difficulty": "MEDIUM",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-17",
@@ -284,11 +300,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "P moves faster and has a longer orbital period",
     "optionD": "Both have the same orbital speed because gravity acts on both",
     "correctOption": "B",
-    "visualClueUrl": "/clues/q17.svg",
+    "imageUrl": "/images/questions/q17.jpg",
+    "visualClueUrl": "/images/questions/q17.jpg",
     "hintText": "Combine centripetal acceleration with Newton's gravity: v = √(GM/r) and Kepler's third law T² ∝ r³. Closer radius 'r' means higher orbital velocity and faster circuit.",
     "explanation": "Orbital speed is inversely related to radius: v = √(GM/r). Because satellite P has a smaller orbital radius (r_P < r_Q), it must travel at a higher speed (v_P > v_Q) to remain in equilibrium. Its shorter orbital perimeter combined with higher speed results in a much shorter period (T_P < T_Q).",
     "difficulty": "HARD",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-18",
@@ -300,11 +317,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "Oxidation",
     "optionD": "Sublimation",
     "correctOption": "B",
-    "visualClueUrl": "/clues/q18.svg",
+    "imageUrl": "/images/questions/q18.jpg",
+    "visualClueUrl": "/images/questions/q18.jpg",
     "hintText": "Derived from the Greek word 'amphoteroi' (meaning 'both'): compounds like Al(OH)3 and ZnO that act as a base in acidic media and an acid in basic media.",
     "explanation": "Amphoterism is the property of a substance enabling it to act as either an acid or a base. Al(OH)3 reacts with hydrochloric acid (HCl) as a base to produce AlCl3 + H2O, and reacts with sodium hydroxide (NaOH) as an acid to form tetrahydroxidoaluminate [Al(OH)4]-.",
     "difficulty": "HARD",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-19",
@@ -316,11 +334,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "Algae permanently convert all water into carbon dioxide",
     "optionD": "Fertilisers prevent sunlight from reaching the atmosphere",
     "correctOption": "B",
-    "visualClueUrl": "/clues/q19.svg",
+    "imageUrl": "/images/questions/q19.jpg",
+    "visualClueUrl": "/images/questions/q19.jpg",
     "hintText": "This environmental ecological cascade is called eutrophication: nutrient influx stimulates rapid surface algal growth, which aerobic bacteria consume upon death, exhausting dissolved O2.",
     "explanation": "Fertilizer nutrients (phosphorus and nitrogen) cause massive algal blooms. When these algae die and sink, aerobic decomposers (bacteria) consume vast quantities of dissolved oxygen (DO) to break them down, leading to hypoxia/anoxia and widespread fish suffocation.",
     "difficulty": "HARD",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-20",
@@ -332,11 +351,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "A microcontroller cannot execute programs",
     "optionD": "A microprocessor cannot perform calculations",
     "correctOption": "B",
-    "visualClueUrl": "/clues/q20.svg",
+    "imageUrl": "/images/questions/q20.jpg",
+    "visualClueUrl": "/images/questions/q20.jpg",
     "hintText": "Think of an Arduino ATmega chip (MCU) containing CPU, RAM, ROM, and ADC inside one package vs an Intel Core or AMD Ryzen chip (MPU) requiring external RAM, SSD, and motherboard bridges.",
     "explanation": "A microcontroller (MCU) is a complete System-on-Chip integrating the CPU core, RAM, Flash memory, timers, and I/O peripherals onto a single silicon die. A microprocessor (MPU) primarily houses the compute/ALU core, depending on external memory and peripheral controllers.",
     "difficulty": "HARD",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-21",
@@ -348,11 +368,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "The ozone layer reflects only blue light",
     "optionD": "The oceans reflect blue light directly onto the sky",
     "correctOption": "B",
-    "visualClueUrl": "/clues/q21.svg",
+    "imageUrl": "/images/questions/q21.jpg",
+    "visualClueUrl": "/images/questions/q21.jpg",
     "hintText": "Lord Rayleigh established that electromagnetic scattering by particles much smaller than light's wavelength is inversely proportional to the 4th power of wavelength: I ∝ 1/λ⁴.",
     "explanation": "Rayleigh scattering intensity scales inversely with the fourth power of wavelength (I ∝ 1/λ⁴). Short visible wavelengths (blue light ~450 nm) scatter nearly 10 times more effectively off atmospheric N2/O2 molecules than long wavelengths (red light ~700 nm), bathing the sky in scattered blue light.",
     "difficulty": "HARD",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-22",
@@ -364,11 +385,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "Both involve only rearranging electrons in chemical bonds",
     "optionD": "Neither can release energy",
     "correctOption": "B",
-    "visualClueUrl": "/clues/q22.svg",
+    "imageUrl": "/images/questions/q22.jpg",
+    "visualClueUrl": "/images/questions/q22.jpg",
     "hintText": "Think of stars (fusing hydrogen isotopes into helium) vs traditional nuclear power plants (fission splitting Uranium-235).",
     "explanation": "Nuclear fusion combines light atomic nuclei (e.g., Deuterium and Tritium) to create a heavier nucleus (Helium), powering stars. Nuclear fission splits a heavy atomic nucleus (e.g., Uranium-235) into smaller fission fragments, used in conventional nuclear reactors.",
     "difficulty": "HARD",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-23",
@@ -380,11 +402,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "Direct current travels more slowly than alternating current",
     "optionD": "Transformer windings conduct only electrons moving in both directions",
     "correctOption": "B",
-    "visualClueUrl": "/clues/q23.svg",
+    "imageUrl": "/images/questions/q23.jpg",
+    "visualClueUrl": "/images/questions/q23.jpg",
     "hintText": "Faraday's Law of Electromagnetic Induction dictates EMF: ε = -N · (dΦ_B / dt). If flux Φ_B is static/constant, its time derivative dΦ/dt is strictly zero.",
     "explanation": "Transformers operate via mutual induction described by Faraday's Law: an electromotive force (EMF) is induced across the secondary coil only when magnetic flux changes with time (dΦ/dt). Steady DC produces a static magnetic field, yielding zero induced secondary voltage.",
     "difficulty": "HARD",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-24",
@@ -396,11 +419,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "It must absorb all visible light",
     "optionD": "It cannot allow total internal reflection",
     "correctOption": "B",
-    "visualClueUrl": "/clues/q24.svg",
+    "imageUrl": "/images/questions/q24.jpg",
+    "visualClueUrl": "/images/questions/q24.jpg",
     "hintText": "The definition of the refractive index of a transparent medium is the ratio of light velocity in vacuum to its phase velocity in the medium: n = c / v.",
     "explanation": "By fundamental optical definition, the refractive index n = c / v, where c is the speed of light in vacuum and v is its phase speed in the medium. Higher n strictly means light propagates at a lower velocity v = c / n through that substance.",
     "difficulty": "HARD",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-25",
@@ -412,11 +436,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "Visible light contains no energy",
     "optionD": "Ultraviolet radiation cannot travel through gases",
     "correctOption": "B",
-    "visualClueUrl": "/clues/q25.svg",
+    "imageUrl": "/images/questions/q25.jpg",
+    "visualClueUrl": "/images/questions/q25.jpg",
     "hintText": "Photons are absorbed when their quantum energy E = h·ν matches discrete molecular electronic bond transitions (Hartley band: 200–310 nm), which break O3 into O2 + O.",
     "explanation": "Absorption of light depends on quantum molecular resonance. Ozone molecules (O3) possess electronic transitions matching the photon energies of UV-B and UV-C (Hartley band ~200–310 nm), breaking covalent bonds. Visible photons lack the resonant energy to induce this transition and pass through.",
     "difficulty": "HARD",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-26",
@@ -428,11 +453,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "The dark region proves that gravity becomes zero there",
     "optionD": "The bright ring is the event horizon itself emitting visible light",
     "correctOption": "B",
-    "visualClueUrl": "/clues/q26.svg",
+    "imageUrl": "/images/questions/q26.jpg",
+    "visualClueUrl": "/images/questions/q26.jpg",
     "hintText": "As revealed by the Event Horizon Telescope (M87* and Sgr A*), the central dark silhouette is an apparent optical shadow (~2.6 r_s in radius) bounded by gravitational photon capture.",
     "explanation": "The dark central silhouette is the 'black hole shadow', formed by photons that cross the photon sphere and plunge into the event horizon. The surrounding bright ring is light emitted by the hot accretion disk, warped and gravitationally lensed by extreme spacetime curvature.",
     "difficulty": "HARD",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-27",
@@ -444,11 +470,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "Wood always produces heat when touched",
     "optionD": "Metal has a lower specific heat in every possible case",
     "correctOption": "B",
-    "visualClueUrl": "/clues/q27.svg",
+    "imageUrl": "/images/questions/q27.jpg",
+    "visualClueUrl": "/images/questions/q27.jpg",
     "hintText": "Thermal effusivity: human skin at ~37°C loses thermal energy much faster to materials with high thermal conductivity (metals) than to thermal insulators (wood).",
     "explanation": "At ~22°C room temperature, both objects are cooler than skin temperature (~37°C). Because metal is an efficient thermal conductor, heat transfers rapidly from fingers into the metal, causing skin temperature to drop sharply and triggering cold sensation receptors.",
     "difficulty": "HARD",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-28",
@@ -460,11 +487,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "Salt releases cold as a chemical substance",
     "optionD": "Salt prevents water molecules from moving",
     "correctOption": "B",
-    "visualClueUrl": "/clues/q28.svg",
+    "imageUrl": "/images/questions/q28.jpg",
+    "visualClueUrl": "/images/questions/q28.jpg",
     "hintText": "Colligative property: salt depresses the freezing point of water. Melting ice is an endothermic phase transition requiring latent heat of fusion (334 J/g).",
     "explanation": "Salt causes freezing-point depression, inducing ice to melt at temperatures below 0°C. Melting is an endothermic phase change that absorbs latent heat of fusion (334 J/g) directly from the solution, plunging the equilibrium temperature down to as low as -21°C.",
     "difficulty": "HARD",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-29",
@@ -476,11 +504,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "Hydrogen atoms burn in oxygen inside the Sun",
     "optionD": "The Sun's magnetic field creates matter from nothing",
     "correctOption": "B",
-    "visualClueUrl": "/clues/q29.svg",
+    "imageUrl": "/images/questions/q29.jpg",
+    "visualClueUrl": "/images/questions/q29.jpg",
     "hintText": "Einstein's mass-energy equivalence equation: E = Δm · c². Four individual protons have slightly more rest mass (0.7% more) than one synthesized Helium-4 nucleus.",
     "explanation": "In solar p-p chain fusion, four protons fuse into one Helium-4 nucleus. The resulting 4He nucleus is approximately 0.71% less massive than the four original protons. This mass difference (mass defect Δm) is converted directly into radiant energy according to E = Δm·c² (~26.7 MeV per reaction).",
     "difficulty": "HARD",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-30",
@@ -492,11 +521,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "The galaxy contains no hydrogen",
     "optionD": "The galaxy has stopped emitting radiation",
     "correctOption": "B",
-    "visualClueUrl": "/clues/q30.svg",
+    "imageUrl": "/images/questions/q30.jpg",
+    "visualClueUrl": "/images/questions/q30.jpg",
     "hintText": "Longer wavelength shift = redshift (z = Δλ/λ0 > 0). In cosmic astrophysics, this is caused by the metric expansion of spacetime stretching photons during transit.",
     "explanation": "When light from distant galaxies travels through an expanding universe, the expansion of spacetime itself stretches the traveling photon wavelengths toward the longer (red) end of the spectrum. This cosmological redshift confirms that space is expanding uniformly.",
     "difficulty": "HARD",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-31",
@@ -508,11 +538,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "Tin",
     "optionD": "Lead",
     "correctOption": "B",
-    "visualClueUrl": "/clues/q31.svg",
+    "imageUrl": "/images/questions/q31.jpg",
+    "visualClueUrl": "/images/questions/q31.jpg",
     "hintText": "This metal (symbol Zn, atomic number 30) acts as a sacrificial anode because its oxidation potential is more negative than iron, preventing rust.",
     "explanation": "Galvanization is the metallurgical process of applying a protective Zinc coating to iron or steel. Zinc corrodes preferentially (sacrificial cathodic protection), shielding the underlying iron from moisture and oxygen.",
     "difficulty": "MEDIUM",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-32",
@@ -524,11 +555,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "Pressure increases the chemical energy of water molecules",
     "optionD": "The cooker converts water into a different substance",
     "correctOption": "A",
-    "visualClueUrl": "/clues/q32.svg",
+    "imageUrl": "/images/questions/q32.jpg",
+    "visualClueUrl": "/images/questions/q32.jpg",
     "hintText": "Boiling occurs when saturated vapor pressure equals ambient pressure. Increasing external pressure traps water molecules, requiring higher thermal energy to vaporize.",
     "explanation": "A liquid boils when its internal vapor pressure equals the surrounding atmospheric pressure. Inside a sealed pressure cooker, steam pressure rises to ~2 atmospheres, raising the boiling point of water from 100°C to ~121°C, cooking food much faster.",
     "difficulty": "MEDIUM",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-33",
@@ -540,11 +572,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "Carbon dioxide",
     "optionD": "Hydrogen",
     "correctOption": "C",
-    "visualClueUrl": "/clues/q33.svg",
+    "imageUrl": "/images/questions/q33.jpg",
+    "visualClueUrl": "/images/questions/q33.jpg",
     "hintText": "Henry's Law (C = k·P): this acidic oxide gas reacts with water to form effervescent carbonic acid (H2CO3) that fizzes when the bottle cap is opened.",
     "explanation": "Carbon dioxide (CO2) is injected into soft drinks at high pressure (30–60 psi). It dissolves and reacts with water to form carbonic acid (CO2 + H2O ⇌ H2CO3), providing bubbly fizz, acidic bite, and antimicrobial preservation.",
     "difficulty": "MEDIUM",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-34",
@@ -556,11 +589,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "Cornea",
     "optionD": "Optic nerve",
     "correctOption": "B",
-    "visualClueUrl": "/clues/q34.svg",
+    "imageUrl": "/images/questions/q34.jpg",
+    "visualClueUrl": "/images/questions/q34.jpg",
     "hintText": "The colored, annular muscular diaphragm that contracts (sphincter pupillae) in bright light and dilates (dilator pupillae) in dim light.",
     "explanation": "The iris is the colored muscular ring surrounding the pupil. It regulates the amount of light entering the eye by adjusting the pupil diameter through antagonistic smooth muscle action: sphincter pupillae (constriction) and dilator pupillae (dilation).",
     "difficulty": "MEDIUM",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-35",
@@ -572,11 +606,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "Neptptune",
     "optionD": "Mars",
     "correctOption": "B",
-    "visualClueUrl": "/clues/q35.svg",
+    "imageUrl": "/images/questions/q35.jpg",
+    "visualClueUrl": "/images/questions/q35.jpg",
     "hintText": "The seventh planet from the Sun has an axial obliquity of 97.77°, causing its rotation axis to point almost directly into its orbital plane.",
     "explanation": "Uranus has an extraordinary axial tilt of 97.77 degrees, causing it to rotate virtually on its side relative to the plane of the Solar System. This leads to extreme 42-year periods of continuous daylight followed by 42 years of night at its poles.",
     "difficulty": "MEDIUM",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-36",
@@ -588,11 +623,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "Aluminium",
     "optionD": "Glass",
     "correctOption": "A",
-    "visualClueUrl": "/clues/q36.svg",
+    "imageUrl": "/images/questions/q36.jpg",
+    "visualClueUrl": "/images/questions/q36.jpg",
     "hintText": "An ideal core requires very high magnetic permeability (μ) to concentrate field lines, but low coercivity/retentivity so it loses magnetism instantly when current stops.",
     "explanation": "Soft iron has high magnetic permeability (strongly amplifying magnetic flux) and very low retentivity/coercivity. When electric current is cut off, soft iron instantly loses its magnetism, making it ideal for temporary electromagnets and relays.",
     "difficulty": "MEDIUM",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-37",
@@ -604,11 +640,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "Nitrogen",
     "optionD": "Argon",
     "correctOption": "C",
-    "visualClueUrl": "/clues/q37.svg",
+    "imageUrl": "/images/questions/q37.jpg",
+    "visualClueUrl": "/images/questions/q37.jpg",
     "hintText": "This diatomic gas comprises approximately 78.08% of dry atmospheric air, compared to ~20.95% for oxygen.",
     "explanation": "Nitrogen (N2) makes up roughly 78.08% of dry atmospheric volume on Earth. Oxygen follows at ~20.95%, Argon at ~0.93%, and Carbon Dioxide at ~0.04%.",
     "difficulty": "EASY",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-38",
@@ -620,11 +657,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "The Sun changes its position randomly",
     "optionD": "Earth's shadow blocks sunlight during every new moon",
     "correctOption": "B",
-    "visualClueUrl": "/clues/q38.svg",
+    "imageUrl": "/images/questions/q38.jpg",
+    "visualClueUrl": "/images/questions/q38.jpg",
     "hintText": "The Moon's orbital plane is inclined by about 5.14 degrees relative to the ecliptic (Earth's orbital plane around the Sun).",
     "explanation": "The Moon's orbit around Earth is tilted at an angle of roughly 5.14° relative to the ecliptic plane. Consequently, the Moon's shadow usually passes slightly above or below Earth during New Moon, unless it occurs at an orbital intersection node.",
     "difficulty": "MEDIUM",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-39",
@@ -636,11 +674,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "Transformer",
     "optionD": "Rectifier",
     "correctOption": "B",
-    "visualClueUrl": "/clues/q39.svg",
+    "imageUrl": "/images/questions/q39.jpg",
+    "visualClueUrl": "/images/questions/q39.jpg",
     "hintText": "Lorentz force on current-carrying conductor in a magnetic field (F = I·L × B) produces mechanical rotational torque.",
     "explanation": "An electric motor takes in electrical energy (voltage and current) and utilizes electromagnetic interaction (Lorentz force) to generate rotational kinetic mechanical energy on an output shaft.",
     "difficulty": "EASY",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-40",
@@ -652,11 +691,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "Rubber",
     "optionD": "Silver",
     "correctOption": "B",
-    "visualClueUrl": "/clues/q40.svg",
+    "imageUrl": "/images/questions/q40.jpg",
+    "visualClueUrl": "/images/questions/q40.jpg",
     "hintText": "Group 14 tetravalent metalloid element (atomic number 14) with a bandgap of ~1.12 eV, forming the backbone of microprocessors and solar cells.",
     "explanation": "Silicon (Si, atomic number 14) is the quintessential semiconductor in modern electronics. Its 1.12 eV bandgap allows precise electrical conductivity modulation via doping (N-type and P-type) for transistors, diodes, and ICs.",
     "difficulty": "EASY",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-41",
@@ -668,11 +708,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "Petroleum is renewable within a few days",
     "optionD": "Natural gas is produced only by solar panels",
     "correctOption": "B",
-    "visualClueUrl": "/clues/q41.svg",
+    "imageUrl": "/images/questions/q41.jpg",
+    "visualClueUrl": "/images/questions/q41.jpg",
     "hintText": "Differential solar heating of the planet drives ongoing atmospheric pressure gradients and planetary convection loops that never exhaust on human timescales.",
     "explanation": "Wind energy is inexhaustible because it is continually driven by solar radiant heating of Earth's surface, creating atmospheric temperature and pressure gradients that replenish kinetic air currents naturally.",
     "difficulty": "EASY",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-42",
@@ -684,11 +725,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "Ice contains no molecules",
     "optionD": "Water becomes a metal when frozen",
     "correctOption": "B",
-    "visualClueUrl": "/clues/q42.svg",
+    "imageUrl": "/images/questions/q42.jpg",
+    "visualClueUrl": "/images/questions/q42.jpg",
     "hintText": "Water expands upon freezing! Hydrogen bonding locks H2O molecules into a rigid, open hexagonal crystal lattice that is ~9% less dense than the liquid state.",
     "explanation": "Liquid water has an anomalous density peak at 3.98°C. As water freezes into ice, hydrogen bonds stabilize into a rigid hexagonal open lattice that occupies more volume, resulting in a lower density (0.917 g/cm³ vs 1.000 g/cm³) that floats on liquid water.",
     "difficulty": "EASY",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-43",
@@ -700,11 +742,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "Increasing the frequency of light",
     "optionD": "Storing magnetic energy permanently",
     "correctOption": "B",
-    "visualClueUrl": "/clues/q43.svg",
+    "imageUrl": "/images/questions/q43.jpg",
+    "visualClueUrl": "/images/questions/q43.jpg",
     "hintText": "Household mains supply is bidirectional alternating current (AC). Devices like phones and computers require unidirectional direct current (DC).",
     "explanation": "A rectifier is an electrical circuit (commonly a full-wave diode bridge) that converts bidirectional alternating current (AC) into unidirectional pulsating direct current (DC) for powering electronic circuits.",
     "difficulty": "MEDIUM",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-44",
@@ -716,11 +759,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "Nuclear fission",
     "optionD": "Magnetic induction",
     "correctOption": "B",
-    "visualClueUrl": "/clues/q44.svg",
+    "imageUrl": "/images/questions/q44.jpg",
+    "visualClueUrl": "/images/questions/q44.jpg",
     "hintText": "Snell's Law: refractive index n(λ) varies with wavelength. Higher frequency violet light bends at a sharper angle than red light.",
     "explanation": "Optical dispersion occurs because a glass prism's refractive index n(λ) varies with light wavelength. Short-wavelength violet light experiences a higher refractive index and refracts more sharply than longer-wavelength red light, fanning out into a rainbow spectrum.",
     "difficulty": "MEDIUM",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-45",
@@ -732,11 +776,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "They work by increasing body temperature",
     "optionD": "They are effective against all microorganisms without exception",
     "correctOption": "B",
-    "visualClueUrl": "/clues/q45.svg",
+    "imageUrl": "/images/questions/q45.jpg",
+    "visualClueUrl": "/images/questions/q45.jpg",
     "hintText": "Antibiotics target peptidoglycan cell walls or 70S bacterial ribosomes. Viruses have protein capsids and hijack host cellular machinery, rendering antibiotics useless against colds or influenza.",
     "explanation": "Antibiotics selectively target bacterial biochemistry, such as peptidoglycan cell wall synthesis (penicillins) or 70S ribosomes (macrolides/tetracyclines). Viruses lack cellular walls, metabolic enzymes, and ribosomes, making them completely immune to antibiotics.",
     "difficulty": "MEDIUM",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-46",
@@ -748,11 +793,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "Proton",
     "optionD": "Photon",
     "correctOption": "C",
-    "visualClueUrl": "/clues/q46.svg",
+    "imageUrl": "/images/questions/q46.jpg",
+    "visualClueUrl": "/images/questions/q46.jpg",
     "hintText": "Represented by the symbol Z in nuclear notation: the number of positively charged subatomic particles in the nucleus.",
     "explanation": "The atomic number (Z) of an atom is defined strictly by the number of positively charged protons located in its nucleus. It determines the element's position on the Periodic Table and its fundamental chemical identity.",
     "difficulty": "EASY",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-47",
@@ -764,11 +810,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "Barometer",
     "optionD": "Hydrometer",
     "correctOption": "B",
-    "visualClueUrl": "/clues/q47.svg",
+    "imageUrl": "/images/questions/q47.jpg",
+    "visualClueUrl": "/images/questions/q47.jpg",
     "hintText": "Connected in parallel across two nodes, featuring an extremely high internal resistance (ideally infinite) to prevent drawing current.",
     "explanation": "A voltmeter is an electrical instrument specifically designed to measure electrical potential difference (voltage, in volts) between two circuit points. It is connected in parallel with components and has very high internal impedance.",
     "difficulty": "EASY",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-48",
@@ -780,11 +827,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "The Sun changes its temperature every six months",
     "optionD": "The Moon blocks sunlight differently in each season",
     "correctOption": "B",
-    "visualClueUrl": "/clues/q48.svg",
+    "imageUrl": "/images/questions/q48.jpg",
+    "visualClueUrl": "/images/questions/q48.jpg",
     "hintText": "Earth's rotational axis is tilted at 23.44° relative to its orbital plane (obliquity), causing seasonal solar irradiance variations in each hemisphere.",
     "explanation": "Earth's 23.44° axial tilt causes different hemispheres to lean toward the Sun during opposite halves of the year. This alters solar incidence angle (more direct insolation per unit area) and day length, producing the seasonal cycle.",
     "difficulty": "MEDIUM",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-49",
@@ -796,11 +844,12 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "It becomes permanently damaged",
     "optionD": "It blocks current under all conditions",
     "correctOption": "B",
-    "visualClueUrl": "/clues/q49.svg",
+    "imageUrl": "/images/questions/q49.jpg",
+    "visualClueUrl": "/images/questions/q49.jpg",
     "hintText": "Connecting the positive external potential to the P-type anode pushes majority carriers toward the PN junction, overcoming the ~0.7V barrier potential.",
     "explanation": "In forward bias (positive potential on P-side anode, negative on N-side cathode), the applied electric field opposes the built-in junction potential. This narrows the depletion region, lowering the potential barrier (~0.7V for Silicon) and allowing substantial current diffusion.",
     "difficulty": "MEDIUM",
-    "durationSeconds": 300
+    "durationSeconds": 240
   },
   {
     "id": "q-50",
@@ -812,10 +861,11 @@ export const DEMO_QUESTIONS: DemoQuestionDef[] = [
     "optionC": "It is the reflected light of the Moon",
     "optionD": "It is radiation emitted by Earth's oceans",
     "correctOption": "A",
-    "visualClueUrl": "/clues/q50.svg",
+    "imageUrl": "/images/questions/q50.jpg",
+    "visualClueUrl": "/images/questions/q50.jpg",
     "hintText": "Discovered by Arno Penzias and Robert Wilson in 1965: nearly uniform 2.725 K thermal blackbody radiation from the recombination epoch ~380,000 years after the Big Bang.",
     "explanation": "The Cosmic Microwave Background (CMB) is relic thermal blackbody radiation emitted ~380,000 years post-Big Bang during the Recombination Epoch. Cosmic metric expansion over 13.8 billion years has cooled and redshifted this light down to 2.725 Kelvin, peaking in the microwave spectrum.",
     "difficulty": "HARD",
-    "durationSeconds": 300
+    "durationSeconds": 240
   }
 ];

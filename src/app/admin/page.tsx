@@ -56,7 +56,7 @@ export default function AdminDashboardPage() {
   const [teams, setTeams] = useState<TeamPublic[]>([]);
   const [questions, setQuestions] = useState<QuestionFull[]>([]);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [remainingSeconds, setRemainingSeconds] = useState(300);
+  const [remainingSeconds, setRemainingSeconds] = useState(240);
   const [isPaused, setIsPaused] = useState(false);
   const [answersMatrix, setAnswersMatrix] = useState<any[]>([]);
 

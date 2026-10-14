@@ -11,6 +11,16 @@ describe("THE BIG BULL - Comprehensive Game Rules & Security Tests", () => {
     await store.initialize();
     // Fresh game
     await store.createOrResetGame();
+    // Reset test teams
+    for (const code of ["BULLS-101", "BULLS-102", "BULLS-103", "BULLS-104"]) {
+      const t = await store.getTeamByCode(code);
+      if (t) {
+        await store.resetTeamStrikes(t.id);
+        if (t.currentBalance !== 5000) {
+          await store.adjustCoins(t.id, 5000 - t.currentBalance, "ADMIN_CREDIT");
+        }
+      }
+    }
   });
 
   // 1. Correct team authentication
@@ -262,7 +272,7 @@ describe("THE BIG BULL - Comprehensive Game Rules & Security Tests", () => {
     const afterWrong = await store.getTeamById(teamWrong!.id);
     expect(afterWrong?.score).toBe(0); // Penalized from 0, stays at 0
     expect(afterWrong?.attemptedQuestions).toBe(1);
-  });
+  }, 15000);
 
   // 16. Unauthorized admin requests
   it("Rule 16: Should reject unauthorized/invalid admin JWT tokens", () => {

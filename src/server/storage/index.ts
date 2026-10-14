@@ -454,20 +454,19 @@ export class DemoStore implements StorageEngine {
   }
 
   public async getTeamById(id: string): Promise<TeamPublic | null> {
+    const mem = this.teams.get(id);
     const prisma = getPrismaClient();
     if (prisma) {
       try {
         const dbTeam = await prisma.team.findUnique({ where: { id } });
         if (dbTeam) {
-          const mem = this.teams.get(id);
-          const merged = { ...(mem || {}), ...dbTeam };
+          const merged = { ...dbTeam, ...(mem || {}) };
           this.teams.set(id, merged);
           return this.toPublicTeam(merged);
         }
       } catch {}
     }
-    const t = this.teams.get(id);
-    return t ? this.toPublicTeam(t) : null;
+    return mem ? this.toPublicTeam(mem) : null;
   }
 
   public async getTeamByCode(teamCode: string): Promise<TeamPublic | null> {
@@ -868,7 +867,7 @@ export class DemoStore implements StorageEngine {
         hintText: r.hintText || null,
         explanation: r.explanation || null,
         difficulty: (r.difficulty?.toUpperCase() as any) || "MEDIUM",
-        durationSeconds: Number(r.durationSeconds) || 300,
+        durationSeconds: Number(r.durationSeconds) || 240,
         isActive: true,
         createdAt: now,
         updatedAt: now,
@@ -917,7 +916,7 @@ export class DemoStore implements StorageEngine {
       correctReward: options?.correctReward ?? 1000,
       incorrectPenalty: options?.incorrectPenalty ?? 200,
       unansweredPenalty: options?.unansweredPenalty ?? 0,
-      defaultQuestionDuration: options?.defaultQuestionDuration ?? 300,
+      defaultQuestionDuration: options?.defaultQuestionDuration ?? 240,
       oneActiveSessionPerTeam: options?.oneActiveSessionPerTeam ?? true,
       examMode: options?.examMode ?? false,
       requireIncognito: options?.requireIncognito ?? true,
@@ -1184,6 +1183,7 @@ export class DemoStore implements StorageEngine {
     const incorrectPenalty = this.game?.incorrectPenalty ?? 200;
     const unansweredPenalty = this.game?.unansweredPenalty ?? 0;
 
+    const prismaUpdates: Promise<any>[] = [];
     // Process every registered team
     for (const team of this.teams.values()) {
       const key = `${gameQuestionId}_${team.id}`;
@@ -1209,13 +1209,34 @@ export class DemoStore implements StorageEngine {
           team.score = Math.max(0, team.score - incorrectPenalty);
         }
         this.answers.set(key, answer);
+        this.teams.set(team.id, team);
+
+        const prisma = getPrismaClient();
+        if (prisma) {
+          prismaUpdates.push(
+            prisma.team
+              .update({
+                where: { id: team.id },
+                data: {
+                  score: team.score,
+                  correctAnswers: team.correctAnswers,
+                  attemptedQuestions: team.attemptedQuestions,
+                },
+              })
+              .catch(() => {})
+          );
+        }
       } else {
         // Unanswered
         if (unansweredPenalty > 0) {
           team.score = Math.max(0, team.score - unansweredPenalty);
+          this.teams.set(team.id, team);
         }
       }
-      this.teams.set(team.id, team);
+    }
+
+    if (prismaUpdates.length > 0) {
+      await Promise.all(prismaUpdates);
     }
 
     this.saveToFile();
@@ -1312,6 +1333,16 @@ export class DemoStore implements StorageEngine {
     team.currentBalance -= cost;
     this.teams.set(teamId, team);
 
+    const prisma = getPrismaClient();
+    if (prisma) {
+      try {
+        await prisma.team.update({
+          where: { id: teamId },
+          data: { currentBalance: team.currentBalance },
+        });
+      } catch (err: any) {}
+    }
+
     // Record Transaction
     this.coinTransactions.push({
       id: `tx-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
@@ -1399,6 +1430,16 @@ export class DemoStore implements StorageEngine {
     const prevBalance = team.currentBalance;
     team.currentBalance += amount;
     this.teams.set(teamId, team);
+
+    const prisma = getPrismaClient();
+    if (prisma) {
+      try {
+        await prisma.team.update({
+          where: { id: teamId },
+          data: { currentBalance: team.currentBalance },
+        });
+      } catch (err: any) {}
+    }
 
     this.coinTransactions.push({
       id: `tx-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,

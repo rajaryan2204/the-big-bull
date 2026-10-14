@@ -12,7 +12,7 @@ export const DEMO_TEAMS: DemoTeamDef[] = [
     name: "Test Team",
     members: ["Test User"],
     accessCode: "test",
-    startingBalance: 5000,
+    startingBalance: 50000,
   },
   {
     teamCode: "U5694BFT",

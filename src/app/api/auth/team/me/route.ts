@@ -29,7 +29,31 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ authenticated: false, error: "Team unavailable" }, { status: 404 });
     }
 
-    return NextResponse.json({ authenticated: true, team });
+    const game = await storage.getCurrentGame();
+    let currentAnswer = null;
+    let lifelines: any = {
+      BULLS_HINT: { type: "BULLS_HINT", purchased: false, cost: 500 },
+      VISION_BOOST: { type: "VISION_BOOST", purchased: false, cost: 1500 },
+      "50_50_BLAST": { type: "50_50_BLAST", purchased: false, cost: 2000 },
+      BULLS_PASS: { type: "BULLS_PASS", purchased: false, cost: 2500 },
+    };
+    let hasPassed = false;
+
+    if (game.currentQuestion) {
+      currentAnswer = await storage.getTeamAnswer(game.currentQuestion.id, team.id);
+      lifelines = await storage.getLifelinesForTeam(game.currentQuestion.id, team.id);
+      hasPassed = !!lifelines.BULLS_PASS?.purchased;
+    }
+
+    const privateState = {
+      team,
+      currentAnswer,
+      lifelines,
+      hasPassed,
+      suspiciousFlagCount: 0,
+    };
+
+    return NextResponse.json({ authenticated: true, team, privateState });
   } catch (err: any) {
     return NextResponse.json({ authenticated: false, error: err.message }, { status: 500 });
   }

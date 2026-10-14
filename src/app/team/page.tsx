@@ -45,7 +45,7 @@ export default function TeamTerminalPage() {
   const [team, setTeam] = useState<TeamPublic | null>(null);
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [privateState, setPrivateState] = useState<TeamPrivateState | null>(null);
-  const [remainingSeconds, setRemainingSeconds] = useState<number>(300);
+  const [remainingSeconds, setRemainingSeconds] = useState<number>(240);
   const [isPaused, setIsPaused] = useState<boolean>(false);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [lockingIn, setLockingIn] = useState(false);
@@ -114,6 +114,12 @@ export default function TeamTerminalPage() {
           setStrikes(data.team.strikesCount || 0);
           const disq = !!data.team.isDisqualified || (data.team.strikesCount || 0) >= 3;
           setIsDisqualified(disq);
+          if (data.privateState) {
+            setPrivateState(data.privateState);
+            if (data.privateState.currentAnswer) {
+              setSelectedOption(data.privateState.currentAnswer.selectedOption);
+            }
+          }
           initSocket(data.team.id);
         }
       })
@@ -373,6 +379,12 @@ export default function TeamTerminalPage() {
             if (disq) {
               setLockdownActive(false);
             }
+            if (data.privateState) {
+              setPrivateState(data.privateState);
+              if (data.privateState.currentAnswer) {
+                setSelectedOption(data.privateState.currentAnswer.selectedOption);
+              }
+            }
           }
         }
       } catch {}
@@ -453,11 +465,13 @@ export default function TeamTerminalPage() {
     setConfirmModal(null);
     soundFx.playLockSound();
 
+    const timeTaken = Math.max(0, (gameState.currentQuestion.durationSeconds || 240) - remainingSeconds);
+
     let socketSuccess = false;
     if (socketRef.current && socketRef.current.connected) {
       socketRef.current.emit(
         "team:submit_answer",
-        { selectedOption: option, timeTakenSeconds: 300 - remainingSeconds },
+        { selectedOption: option, timeTakenSeconds: timeTaken },
         (res: any) => {
           if (res?.success) socketSuccess = true;
         }
@@ -470,10 +484,12 @@ export default function TeamTerminalPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "submit_answer",
+          selectedOption: option,
+          timeTakenSeconds: timeTaken,
           payload: {
             gameQuestionId: gameState.currentQuestion.id,
             selectedOption: option,
-            timeTakenSeconds: 300 - remainingSeconds,
+            timeTakenSeconds: timeTaken,
           },
         }),
       });
@@ -482,9 +498,13 @@ export default function TeamTerminalPage() {
         alert(data.error || "Submission failed.");
       } else if (data.answer) {
         setSelectedOption(data.answer.selectedOption);
-        if (privateState) {
-          setPrivateState({ ...privateState, currentAnswer: data.answer });
-        }
+        setPrivateState((prev) => ({
+          team: prev?.team || team || ({} as any),
+          currentAnswer: data.answer,
+          lifelines: prev?.lifelines || ({} as any),
+          hasPassed: prev?.hasPassed || false,
+          suspiciousFlagCount: prev?.suspiciousFlagCount || 0,
+        }));
       }
     } catch {
       if (!socketSuccess) console.error("HTTP fallback submit error");
@@ -514,17 +534,33 @@ export default function TeamTerminalPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "buy_lifeline",
+          lifelineType: type,
           payload: { gameQuestionId: gameState.currentQuestion.id, lifelineType: type },
         }),
       });
       const data = await res.json();
       if (!res.ok && !socketSuccess) {
         alert(data.error || "Lifeline purchase failed.");
-      } else if (data.lifeline) {
+      } else if (data.lifeline || data.success) {
         soundFx.playCoinDing();
         if (team && data.newBalance !== undefined) {
           setTeam({ ...team, currentBalance: data.newBalance });
         }
+        setPrivateState((prev) => {
+          const currentLifelines = prev?.lifelines ? { ...prev.lifelines } : ({} as any);
+          if (data.lifelines) {
+            Object.assign(currentLifelines, data.lifelines);
+          } else if (data.lifeline) {
+            currentLifelines[type] = data.lifeline;
+          }
+          return {
+            team: prev?.team || team || ({} as any),
+            currentAnswer: prev?.currentAnswer || null,
+            lifelines: currentLifelines,
+            hasPassed: prev?.hasPassed || data.hasPassed || type === "BULLS_PASS",
+            suspiciousFlagCount: prev?.suspiciousFlagCount || 0,
+          };
+        });
       }
     } catch {
       if (!socketSuccess) console.error("HTTP fallback lifeline error");
@@ -555,6 +591,28 @@ export default function TeamTerminalPage() {
   const secs = Math.max(0, remainingSeconds) % 60;
   const timerDisplay = `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
 
+  const isTestTeam = team?.teamCode?.toUpperCase() === "TEST";
+
+  const handleTesterAction = async (action: string) => {
+    try {
+      const res = await fetch("/api/team/action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      const data = await res.json();
+      if (action === "tester:reset_strikes") {
+        setStrikes(0);
+        setIsDisqualified(false);
+      }
+      if (action === "tester:refill_coins" && data.newBalance !== undefined) {
+        if (team) setTeam({ ...team, currentBalance: data.newBalance });
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   // ==========================================
   // VIEW 0: INCOGNITO ENFORCEMENT BARRIER
   // ==========================================
@@ -564,6 +622,7 @@ export default function TeamTerminalPage() {
       <IncognitoBarrier
         browserName={browserName}
         onRecheck={checkIncognitoStatus}
+        onBypass={() => setIsIncognito(true)}
         isChecking={checkingIncognito}
       />
     );
@@ -605,6 +664,15 @@ export default function TeamTerminalPage() {
               3 of 3 Security Violations Recorded
             </div>
           </div>
+
+          {isTestTeam && (
+            <button
+              onClick={() => handleTesterAction("tester:reset_strikes")}
+              className="w-full mt-2 py-3 rounded-xl bg-blue-600 text-white font-bold text-xs hover:bg-blue-700 cursor-pointer shadow-md transition active:scale-[0.99]"
+            >
+              🧪 Reset Strikes & Re-enter (Tester Mode)
+            </button>
+          )}
 
           <button
             onClick={handleLogout}
@@ -1182,42 +1250,32 @@ export default function TeamTerminalPage() {
                   {currentQ.question.text}
                 </p>
 
-                {/* Compact Image thumbnail if present */}
-                {currentQ.question.imageUrl && (
-                  <div className="flex items-center gap-2 pt-0.5">
-                    <div className="relative rounded-lg overflow-hidden border border-slate-200 h-12 w-20 bg-slate-100 shrink-0">
-                      <img
-                        src={currentQ.question.imageUrl}
-                        alt="Reference"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <span className="text-[10px] text-slate-500 font-medium">Visual Clue Attached</span>
-                  </div>
-                )}
-
-                {/* Private Unlocked Clues */}
+                {/* Bull's Hint if unlocked */}
                 {hintText && (
-                  <div className="p-1.5 rounded-lg bg-blue-50/80 border border-blue-200 text-blue-950 text-[11px] flex items-center gap-1.5">
-                    <Lightbulb className="w-3 h-3 text-blue-600 shrink-0" />
-                    <span className="truncate"><strong>Hint:</strong> {hintText}</span>
+                  <div className="p-2 rounded-xl bg-blue-50 border border-blue-200 text-blue-950 text-xs flex items-start gap-2 animate-in fade-in">
+                    <Lightbulb className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                    <div className="leading-snug">
+                      <span className="font-bold text-blue-900">Bull&apos;s Hint: </span>
+                      <span>{hintText}</span>
+                    </div>
                   </div>
                 )}
 
+                {/* Vision Boost Clue if unlocked */}
                 {visualClueUrl && (
                   <button
                     type="button"
                     onClick={() => setShowClueModal(true)}
-                    className="w-full flex items-center justify-between p-1.5 rounded-lg bg-purple-50 hover:bg-purple-100/80 border border-purple-200 text-purple-950 transition cursor-pointer text-left shrink-0"
+                    className="w-full flex items-center justify-between p-2 rounded-xl bg-purple-50 hover:bg-purple-100/80 border border-purple-200 text-purple-950 transition cursor-pointer text-left shrink-0 animate-in fade-in"
                   >
-                    <div className="flex items-center gap-1.5">
-                      <Eye className="w-3.5 h-3.5 text-purple-600 shrink-0" />
+                    <div className="flex items-center gap-2">
+                      <Eye className="w-4 h-4 text-purple-600 shrink-0" />
                       <div>
-                        <div className="text-[11px] font-bold text-purple-900 leading-tight">Vision Boost Clue</div>
-                        <div className="text-[9px] text-purple-600 font-medium">Tap to view full diagram</div>
+                        <div className="text-xs font-bold text-purple-900 leading-tight">Vision Boost Clue Unlocked</div>
+                        <div className="text-[10px] text-purple-600 font-medium">Tap to view full resolution diagram</div>
                       </div>
                     </div>
-                    <div className="h-7 w-12 rounded overflow-hidden border border-purple-300 shrink-0 bg-slate-900">
+                    <div className="h-8 w-12 rounded-lg overflow-hidden border border-purple-300 shrink-0 bg-slate-900 shadow-xs">
                       <img src={visualClueUrl} alt="Clue" className="w-full h-full object-cover" />
                     </div>
                   </button>
@@ -1277,6 +1335,12 @@ export default function TeamTerminalPage() {
                         </span>
                         <span className="leading-tight truncate">{opt.text}</span>
                       </div>
+
+                      {isEliminated && (
+                        <div className="flex items-center gap-1 text-[10px] font-bold text-red-500 uppercase shrink-0 ml-1 bg-red-100/90 px-1.5 py-0.5 rounded">
+                          <span>Eliminated</span>
+                        </div>
+                      )}
 
                       {isLocked && (
                         <div className="flex items-center gap-1 text-[10px] font-bold text-blue-100 uppercase shrink-0 ml-1">

@@ -15,12 +15,14 @@ import { soundFx } from "@/src/lib/soundFx";
 interface IncognitoBarrierProps {
   browserName?: string;
   onRecheck?: () => void;
+  onBypass?: () => void;
   isChecking?: boolean;
 }
 
 export function IncognitoBarrier({
   browserName = "Browser",
   onRecheck,
+  onBypass,
   isChecking = false,
 }: IncognitoBarrierProps) {
   const [copied, setCopied] = useState(false);
@@ -146,8 +148,19 @@ export function IncognitoBarrier({
       </main>
 
       {/* Footer */}
-      <footer className="text-center text-[11px] text-slate-600 max-w-md mx-auto w-full pt-3">
-        Device restriction note: If your school/company device blocks incognito, ask the Admin to pardon your station.
+      <footer className="text-center text-[11px] text-slate-600 max-w-md mx-auto w-full pt-3 space-y-1.5">
+        <div>Device restriction note: If your device blocks incognito, ask the Admin to pardon your station.</div>
+        {onBypass && (
+          <div>
+            <button
+              onClick={onBypass}
+              type="button"
+              className="px-3 py-1 rounded-full bg-slate-200/80 hover:bg-slate-300 text-slate-700 font-bold text-[10px] transition cursor-pointer"
+            >
+              🧪 Tester Mode: Click to Bypass Incognito
+            </button>
+          </div>
+        )}
       </footer>
     </div>
   );
