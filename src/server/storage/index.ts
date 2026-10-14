@@ -427,10 +427,34 @@ export class DemoStore implements StorageEngine {
 
   // --- Teams ---
   public async getAllTeams(): Promise<TeamPublic[]> {
+    const prisma = getPrismaClient();
+    if (prisma) {
+      try {
+        const dbTeams = await prisma.team.findMany();
+        if (dbTeams && dbTeams.length > 0) {
+          dbTeams.forEach((dt: any) => {
+            const existing = this.teams.get(dt.id) || {};
+            this.teams.set(dt.id, { ...existing, ...dt });
+          });
+        }
+      } catch {}
+    }
     return Array.from(this.teams.values()).map(this.toPublicTeam);
   }
 
   public async getTeamById(id: string): Promise<TeamPublic | null> {
+    const prisma = getPrismaClient();
+    if (prisma) {
+      try {
+        const dbTeam = await prisma.team.findUnique({ where: { id } });
+        if (dbTeam) {
+          const mem = this.teams.get(id);
+          const merged = { ...(mem || {}), ...dbTeam };
+          this.teams.set(id, merged);
+          return this.toPublicTeam(merged);
+        }
+      } catch {}
+    }
     const t = this.teams.get(id);
     return t ? this.toPublicTeam(t) : null;
   }
@@ -1400,7 +1424,55 @@ export class DemoStore implements StorageEngine {
     teamId: string,
     reason: string
   ): Promise<{ strikesCount: number; isDisqualified: boolean }> {
-    const team = this.teams.get(teamId);
+    let team = this.teams.get(teamId);
+
+    const prisma = getPrismaClient();
+    if (prisma) {
+      try {
+        const updated = await prisma.team.update({
+          where: { id: teamId },
+          data: {
+            strikesCount: { increment: 1 },
+          },
+        });
+
+        const isDisq = updated.strikesCount >= 3;
+        if (isDisq && !updated.isDisqualified) {
+          await prisma.team.update({
+            where: { id: teamId },
+            data: { isDisqualified: true, isDisabled: true },
+          });
+        }
+
+        if (!team) {
+          team = { ...(updated as any), strikesCount: updated.strikesCount, isDisqualified: isDisq };
+        } else {
+          team.strikesCount = updated.strikesCount;
+          team.isDisqualified = isDisq;
+          if (isDisq) team.isDisabled = true;
+        }
+        this.teams.set(teamId, team);
+
+        await this.recordSuspiciousActivity(
+          teamId,
+          "STRIKE_RECORDED",
+          `Strike #${updated.strikesCount}/3: ${reason}${isDisq ? " -> EXAM TERMINATED (DISQUALIFIED)" : ""}`
+        );
+
+        await this.logAudit(
+          isDisq ? "TEAM_DISQUALIFIED" : "STRIKE_ISSUED",
+          "SYSTEM",
+          { strike: updated.strikesCount, reason, isDisqualified: isDisq },
+          { teamId }
+        );
+
+        this.saveToFile();
+        return { strikesCount: updated.strikesCount, isDisqualified: isDisq };
+      } catch (err: any) {
+        console.warn("Prisma recordTeamStrike sync notice:", err.message);
+      }
+    }
+
     if (!team) return { strikesCount: 0, isDisqualified: false };
 
     team.strikesCount = (team.strikesCount || 0) + 1;
@@ -1423,22 +1495,6 @@ export class DemoStore implements StorageEngine {
       { strike: team.strikesCount, reason, isDisqualified },
       { teamId }
     );
-
-    const prisma = getPrismaClient();
-    if (prisma) {
-      try {
-        await prisma.team.update({
-          where: { id: teamId },
-          data: {
-            strikesCount: team.strikesCount,
-            isDisqualified: isDisqualified,
-            isDisabled: isDisqualified ? true : team.isDisabled,
-          },
-        });
-      } catch (err: any) {
-        console.warn("Prisma recordTeamStrike sync notice:", err.message);
-      }
-    }
 
     this.saveToFile();
     return { strikesCount: team.strikesCount, isDisqualified };
