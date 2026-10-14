@@ -110,7 +110,8 @@ export default function TeamTerminalPage() {
         } else {
           setTeam(data.team);
           setStrikes(data.team.strikesCount || 0);
-          setIsDisqualified(data.team.isDisqualified || false);
+          const disq = !!data.team.isDisqualified || (data.team.strikesCount || 0) >= 3;
+          setIsDisqualified(disq);
           initSocket(data.team.id);
         }
       })
@@ -563,6 +564,54 @@ export default function TeamTerminalPage() {
         onRecheck={checkIncognitoStatus}
         isChecking={checkingIncognito}
       />
+    );
+  }
+
+  // ==========================================
+  // VIEW: PERMANENT DISQUALIFICATION SCREEN
+  // ==========================================
+  if (isDisqualified) {
+    return (
+      <div className="fixed inset-0 z-50 bg-slate-900/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center space-y-5 font-sans select-none">
+        <div className="w-16 h-16 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center shadow-lg">
+          <XCircle className="w-10 h-10" />
+        </div>
+
+        <div className="space-y-1.5 max-w-md w-full bg-white p-6 rounded-2xl shadow-xl">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-red-700 bg-red-50 px-2.5 py-0.5 rounded-full border border-red-200">
+            Disqualified • Exam Terminated
+          </span>
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight pt-2">
+            Terminal Locked
+          </h1>
+          <p className="text-xs text-slate-600 leading-relaxed">
+            Team <strong className="text-slate-900">{team?.teamCode}</strong> exceeded the maximum limit of 3 security strikes.
+          </p>
+
+          <div className="p-3 my-2 rounded-xl bg-red-50 border border-red-200 text-center">
+            <div className="flex items-center justify-center gap-3">
+              {[1, 2, 3].map((s) => (
+                <div
+                  key={s}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs bg-red-600 border border-red-600 text-white shadow-xs"
+                >
+                  #{s}
+                </div>
+              ))}
+            </div>
+            <div className="mt-1.5 text-[11px] font-semibold text-red-700">
+              3 of 3 Security Violations Recorded
+            </div>
+          </div>
+
+          <button
+            onClick={handleLogout}
+            className="w-full mt-2 py-3 rounded-xl border border-slate-300 bg-slate-50 text-slate-700 font-semibold text-xs hover:bg-slate-100 cursor-pointer transition active:scale-[0.99]"
+          >
+            Exit Terminal
+          </button>
+        </div>
+      </div>
     );
   }
 

@@ -636,7 +636,7 @@ export class DemoStore implements StorageEngine {
       return { success: false, error: "Invalid team code or credentials." };
     }
 
-    if (matched.isDisabled) {
+    if (matched.isDisabled && !matched.isDisqualified) {
       return { success: false, error: "This team has been disabled by the administrator." };
     }
 
@@ -688,7 +688,7 @@ export class DemoStore implements StorageEngine {
       return { valid: false };
     }
     const team = this.teams.get(session.teamId);
-    if (!team || team.isDisabled) return { valid: false };
+    if (!team) return { valid: false };
     return { valid: true, teamId: session.teamId, session };
   }
 
@@ -1139,6 +1139,9 @@ export class DemoStore implements StorageEngine {
   ): Promise<{ success: boolean; lifeline?: LifelineState; error?: string }> {
     const team = this.teams.get(teamId);
     if (!team) return { success: false, error: "Team not found" };
+    if (team.isDisabled || team.isDisqualified) {
+      return { success: false, error: "Team terminal is disabled or disqualified." };
+    }
 
     const gq = this.gameQuestions.get(gameQuestionId);
     if (!gq) return { success: false, error: "Question not found" };
@@ -1445,7 +1448,7 @@ export class DemoStore implements StorageEngine {
         }
 
         if (!team) {
-          team = { ...(updated as any), strikesCount: updated.strikesCount, isDisqualified: isDisq };
+          team = { ...(updated as any), strikesCount: updated.strikesCount, isDisqualified: isDisq, isDisabled: isDisq };
         } else {
           team.strikesCount = updated.strikesCount;
           team.isDisqualified = isDisq;
