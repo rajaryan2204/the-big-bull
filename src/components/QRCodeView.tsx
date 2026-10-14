@@ -22,18 +22,8 @@ export const QRCodeView: React.FC<QRCodeViewProps> = ({
 
   useEffect(() => {
     async function resolveAndGenerate() {
-      let finalUrl = url;
-      if (!finalUrl) {
-        try {
-          const res = await fetch("/api/health");
-          const data = await res.json();
-          finalUrl = data.joinUrl || `${window.location.origin}/`;
-        } catch (e) {
-          finalUrl = `${window.location.origin}/`;
-        }
-      }
-
-      const resolvedUrl = finalUrl || `${window.location.origin}/`;
+      const origin = typeof window !== "undefined" && window.location.origin ? window.location.origin : "https://the-big-bull.vercel.app";
+      const resolvedUrl = url || `${origin}/`;
       setTargetUrl(resolvedUrl);
 
       try {

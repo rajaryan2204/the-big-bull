@@ -257,7 +257,76 @@ export class DemoStore implements StorageEngine {
         });
       });
 
-      await this.createOrResetGame();
+      // Check if an existing game is saved in PostgreSQL
+      const dbGame = await prisma.game.findFirst({
+        orderBy: { createdAt: "desc" },
+        include: {
+          gameQuestions: {
+            orderBy: { orderIndex: "asc" },
+          },
+        },
+      });
+
+      if (dbGame && dbGame.gameQuestions && dbGame.gameQuestions.length > 0) {
+        this.game = {
+          id: dbGame.id,
+          title: dbGame.title,
+          status: dbGame.status as any,
+          currentQuestionIndex: dbGame.currentQuestionIndex,
+          totalQuestions: dbGame.gameQuestions.length,
+          correctReward: dbGame.correctReward,
+          incorrectPenalty: dbGame.incorrectPenalty,
+          unansweredPenalty: dbGame.unansweredPenalty,
+          defaultQuestionDuration: dbGame.defaultQuestionDuration,
+          oneActiveSessionPerTeam: dbGame.oneActiveSessionPerTeam,
+          examMode: dbGame.examMode,
+          requireIncognito: (dbGame as any).requireIncognito ?? true,
+          allowAnswerChange: dbGame.allowAnswerChange,
+          allowRepeatLifelines: dbGame.allowRepeatLifelines,
+          publicLeaderboardColumns: dbGame.publicLeaderboardColumns,
+          totalAnswersReceived: 0,
+          totalTeamsCount: this.teams.size,
+          connectedTeamsCount: 0,
+          isDemoMode: false,
+        };
+
+        dbGame.gameQuestions.forEach((gq: any) => {
+          this.gameQuestions.set(gq.id, {
+            id: gq.id,
+            gameId: gq.gameId,
+            questionId: gq.questionId,
+            orderIndex: gq.orderIndex,
+            durationSeconds: gq.durationSeconds,
+            status: gq.status,
+            openedAt: gq.openedAt ? gq.openedAt.toISOString() : null,
+            deadline: gq.deadline ? gq.deadline.toISOString() : null,
+            closedAt: gq.closedAt ? gq.closedAt.toISOString() : null,
+            remainingOnPause: gq.remainingOnPause,
+            question: this.questions.get(gq.questionId),
+          });
+        });
+        const dbAnswers = await prisma.teamAnswer.findMany({
+          where: { gameId: dbGame.id },
+        });
+        dbAnswers.forEach((a: any) => {
+          this.answers.set(`${a.gameQuestionId}_${a.teamId}`, {
+            id: a.id,
+            teamId: a.teamId,
+            selectedOption: a.selectedOption,
+            isCorrect: a.isCorrect,
+            isLocked: a.isLocked,
+            pointsAwarded: a.pointsAwarded,
+            timeTakenSeconds: a.timeTakenSeconds,
+            submittedAt: a.submittedAt.toISOString(),
+            gameQuestionId: a.gameQuestionId,
+          } as any);
+        });
+
+        console.log(`🚀 [PostgreSQL] Loaded active game '${this.game.id}' (status: ${this.game.status}, Q#${this.game.currentQuestionIndex + 1}) from Neon DB`);
+      } else {
+        await this.createOrResetGame();
+      }
+
       this.isDemoMode = false;
       this.saveToFile();
       console.log(`🚀 [PostgreSQL] Synced ${dbTeams.length} teams & ${dbQuestions.length} questions from live Neon DB!`);
@@ -277,6 +346,16 @@ export class DemoStore implements StorageEngine {
       username: adminUser,
       passwordHash: adminHash,
       name: "Chief Administrator",
+      createdAt: new Date().toISOString(),
+    });
+
+    // Also seed user requested credentials: bigbulls / questions
+    const bigbullHash = bcrypt.hashSync("questions", 10);
+    this.admins.set("bigbulls", {
+      id: "admin-bigbulls-01",
+      username: "bigbulls",
+      passwordHash: bigbullHash,
+      name: "Big Bull Master",
       createdAt: new Date().toISOString(),
     });
 
@@ -404,8 +483,8 @@ export class DemoStore implements StorageEngine {
 
     const prisma = getPrismaClient();
     if (prisma) {
-      prisma.team
-        .create({
+      try {
+        await prisma.team.create({
           data: {
             id,
             teamCode: code,
@@ -421,8 +500,10 @@ export class DemoStore implements StorageEngine {
             isDisabled: false,
             connectionStatus: "DISCONNECTED",
           },
-        })
-        .catch((err) => console.warn("Prisma team create sync notice:", err.message));
+        });
+      } catch (err: any) {
+        console.warn("Prisma team create sync notice:", err.message);
+      }
     }
 
     this.coinTransactions.push({
@@ -458,17 +539,19 @@ export class DemoStore implements StorageEngine {
 
     const prisma = getPrismaClient();
     if (prisma) {
-      const updateData: any = {};
-      if (updates.name !== undefined) updateData.name = team.name;
-      if (updates.members !== undefined) updateData.members = team.members;
-      if (updates.isDisabled !== undefined) updateData.isDisabled = team.isDisabled;
-      if (updates.isActive !== undefined) updateData.isActive = team.isActive;
-      prisma.team
-        .update({
+      try {
+        const updateData: any = {};
+        if (updates.name !== undefined) updateData.name = team.name;
+        if (updates.members !== undefined) updateData.members = team.members;
+        if (updates.isDisabled !== undefined) updateData.isDisabled = team.isDisabled;
+        if (updates.isActive !== undefined) updateData.isActive = team.isActive;
+        await prisma.team.update({
           where: { id },
           data: updateData,
-        })
-        .catch((err) => console.warn("Prisma team update sync notice:", err.message));
+        });
+      } catch (err: any) {
+        console.warn("Prisma team update sync notice:", err.message);
+      }
     }
 
     this.saveToFile();
@@ -480,7 +563,11 @@ export class DemoStore implements StorageEngine {
     if (deleted) {
       const prisma = getPrismaClient();
       if (prisma) {
-        prisma.team.delete({ where: { id } }).catch((err) => console.warn("Prisma team delete notice:", err.message));
+        try {
+          await prisma.team.delete({ where: { id } });
+        } catch (err: any) {
+          console.warn("Prisma team delete notice:", err.message);
+        }
       }
       this.saveToFile();
     }
@@ -771,6 +858,26 @@ export class DemoStore implements StorageEngine {
     if (!gq) throw new Error("GameQuestion not found");
     Object.assign(gq, updates);
     this.gameQuestions.set(gameQuestionId, gq);
+
+    const prisma = getPrismaClient();
+    if (prisma) {
+      const pUpdates: any = {};
+      if (updates.status !== undefined) pUpdates.status = updates.status;
+      if (updates.openedAt !== undefined) pUpdates.openedAt = updates.openedAt ? new Date(updates.openedAt) : null;
+      if (updates.deadline !== undefined) pUpdates.deadline = updates.deadline ? new Date(updates.deadline) : null;
+      if (updates.closedAt !== undefined) pUpdates.closedAt = updates.closedAt ? new Date(updates.closedAt) : null;
+      if (updates.remainingOnPause !== undefined) pUpdates.remainingOnPause = updates.remainingOnPause;
+
+      try {
+        await prisma.gameQuestion.update({
+          where: { id: gameQuestionId },
+          data: pUpdates,
+        });
+      } catch (e: any) {
+        console.warn("Prisma updateGameQuestion notice:", e.message);
+      }
+    }
+
     this.saveToFile();
     const isReveal = gq.status === "REVEALED" || this.game?.status === "ANSWER_REVEAL";
     return this.toGameQuestionState(gq, isReveal);
@@ -782,6 +889,29 @@ export class DemoStore implements StorageEngine {
     if (currentQuestionIndex !== undefined) {
       this.game!.currentQuestionIndex = currentQuestionIndex;
     }
+
+    const prisma = getPrismaClient();
+    if (prisma && this.game) {
+      try {
+        await prisma.game.upsert({
+          where: { id: this.game.id },
+          create: {
+            id: this.game.id,
+            title: this.game.title,
+            status: this.game.status,
+            currentQuestionIndex: this.game.currentQuestionIndex,
+            defaultQuestionDuration: this.game.defaultQuestionDuration,
+          },
+          update: {
+            status: this.game.status,
+            currentQuestionIndex: this.game.currentQuestionIndex,
+          },
+        });
+      } catch (e: any) {
+        console.warn("Prisma updateGameStatus notice:", e.message);
+      }
+    }
+
     this.saveToFile();
     return this.buildGameState();
   }
@@ -857,9 +987,39 @@ export class DemoStore implements StorageEngine {
       submittedAt: new Date().toISOString(),
     };
     (answerRecord as any).gameQuestionId = gameQuestionId;
-    (answerRecord as any).gameId = gameId;
-
     this.answers.set(key, answerRecord);
+
+    const prisma = getPrismaClient();
+    if (prisma) {
+      try {
+        await prisma.teamAnswer.upsert({
+          where: {
+            gameQuestionId_teamId: {
+              gameQuestionId,
+              teamId,
+            },
+          },
+          create: {
+            id: answerRecord.id,
+            gameId,
+            gameQuestionId,
+            teamId,
+            selectedOption: opt,
+            isLocked: true,
+            pointsAwarded: 0,
+            timeTakenSeconds: timeTakenSeconds || null,
+            submittedAt: new Date(answerRecord.submittedAt),
+          },
+          update: {
+            selectedOption: opt,
+            timeTakenSeconds: timeTakenSeconds || null,
+          },
+        });
+      } catch (e: any) {
+        console.warn("Prisma submitAnswer sync error:", e.message);
+      }
+    }
+
     this.logAudit("ANSWER_SUBMITTED", "TEAM", { gameQuestionId, selectedOption: opt }, { gameId, teamId });
     this.saveToFile();
     return { success: true, answer: answerRecord };
@@ -1292,11 +1452,11 @@ export class DemoStore implements StorageEngine {
   }
 
   private toGameQuestionState(gq: any, isReveal: boolean): GameQuestionState {
-    const q = gq.question;
+    const q = gq.question || this.questions.get(gq.questionId) || {};
     const publicQuestion: QuestionPublic = {
-      id: q.id,
-      category: q.category,
-      text: q.text,
+      id: q.id || gq.questionId,
+      category: q.category || "General Knowledge",
+      text: q.text || "",
       optionA: q.optionA,
       optionB: q.optionB,
       optionC: q.optionC,

@@ -47,8 +47,8 @@ import {
 
 export default function AdminDashboardPage() {
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
-  const [adminUsername, setAdminUsername] = useState("admin");
-  const [adminPassword, setAdminPassword] = useState("bigbull2026");
+  const [adminUsername, setAdminUsername] = useState("bigbulls");
+  const [adminPassword, setAdminPassword] = useState("questions");
   const [loginError, setLoginError] = useState<string | null>(null);
   const [loginLoading, setLoginLoading] = useState(false);
 
@@ -254,28 +254,37 @@ export default function AdminDashboardPage() {
     await sendAdminCommand("admin:toggle_incognito", { requireIncognito: nextVal });
   };
 
-  // HTTP Polling Fallback (ensures live telemetry updates if WebSockets disconnect or on Vercel)
+  // Smooth 1-second countdown clock for admin dashboard
+  useEffect(() => {
+    const clockInterval = setInterval(() => {
+      if (gameState?.status === "QUESTION_ACTIVE" && gameState.currentQuestion?.deadline) {
+        const ms = new Date(gameState.currentQuestion.deadline).getTime();
+        setRemainingSeconds(Math.max(0, Math.ceil((ms - Date.now()) / 1000)));
+      }
+    }, 1000);
+    return () => clearInterval(clockInterval);
+  }, [gameState]);
+
+  // Unconditional HTTP Polling Fallback (ensures live telemetry updates across Vercel Lambdas)
   useEffect(() => {
     if (!authenticated) return;
     const pollInterval = setInterval(async () => {
-      if (!socketRef.current || !socketRef.current.connected) {
-        try {
-          const res = await fetch("/api/game/state");
-          const data = await res.json();
-          if (data.success && data.game) {
-            setGameState(data.game);
-            if (data.leaderboard) setLeaderboard(data.leaderboard);
-            if (data.game.status === "QUESTION_ACTIVE" && data.game.currentQuestion?.deadline) {
-              const ms = new Date(data.game.currentQuestion.deadline).getTime();
-              setRemainingSeconds(Math.max(0, Math.ceil((ms - Date.now()) / 1000)));
-              setIsPaused(false);
-            } else if (data.game.status === "QUESTION_PAUSED" && data.game.currentQuestion?.remainingOnPause) {
-              setRemainingSeconds(Math.ceil(data.game.currentQuestion.remainingOnPause / 1000));
-              setIsPaused(true);
-            }
+      try {
+        const res = await fetch("/api/game/state");
+        const data = await res.json();
+        if (data.success && data.game) {
+          setGameState(data.game);
+          if (data.leaderboard) setLeaderboard(data.leaderboard);
+          if (data.game.status === "QUESTION_ACTIVE" && data.game.currentQuestion?.deadline) {
+            const ms = new Date(data.game.currentQuestion.deadline).getTime();
+            setRemainingSeconds(Math.max(0, Math.ceil((ms - Date.now()) / 1000)));
+            setIsPaused(false);
+          } else if (data.game.status === "QUESTION_PAUSED" && data.game.currentQuestion?.remainingOnPause) {
+            setRemainingSeconds(Math.ceil(data.game.currentQuestion.remainingOnPause / 1000));
+            setIsPaused(true);
           }
-        } catch (e) {}
-      }
+        }
+      } catch (e) {}
     }, 1500);
     return () => clearInterval(pollInterval);
   }, [authenticated]);
