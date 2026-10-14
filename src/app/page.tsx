@@ -11,6 +11,7 @@ import {
   Lock,
 } from "lucide-react";
 import { BullLogo } from "@/src/components/BullLogo";
+import { EventCountdown } from "@/src/components/EventCountdown";
 import { detectIncognito } from "@/src/lib/detectIncognito";
 import { IncognitoBarrier } from "@/src/components/IncognitoBarrier";
 
@@ -167,15 +168,20 @@ export default function StudentParticipantPortal() {
       </header>
 
       {/* Main Student Login Card */}
-      <main className="max-w-md mx-auto w-full my-auto py-4 sm:py-6 space-y-4 sm:space-y-5">
+      <main className="max-w-md mx-auto w-full my-auto py-3 sm:py-5 space-y-3 sm:space-y-4">
+        {/* Event Schedule Countdown to 16 Oct 11:30 AM */}
+        <div className="p-3 sm:p-4 rounded-2xl bg-gradient-to-b from-blue-50/70 to-white border border-blue-200/80 shadow-xs">
+          <EventCountdown size="sm" showDateBadge={true} />
+        </div>
+
         <div className="text-center space-y-1">
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[11px] font-bold uppercase tracking-wider mb-1">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[10.5px] font-bold uppercase tracking-wider">
             Participant Exam Portal
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
             Team Log In
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500">
+          <p className="text-xs text-slate-500">
             Enter your team credentials to access the live quiz terminal.
           </p>
         </div>

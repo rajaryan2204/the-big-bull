@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { GameState, LeaderboardEntry } from "@/src/types";
 import { BullLogo } from "@/src/components/BullLogo";
+import { EventCountdown } from "@/src/components/EventCountdown";
 
 export default function SmartBoardPage() {
   const [gameState, setGameState] = useState<GameState | null>(null);
@@ -563,6 +564,11 @@ export default function SmartBoardPage() {
               <p className="text-base text-slate-600 leading-relaxed">
                 Scan the QR code with any phone camera to access the participant terminal. 5,000 Coins starting capital. Each round runs on a live 5-minute countdown clock.
               </p>
+
+              {/* Event Countdown to 16 Oct 11:30 AM */}
+              <div className="p-5 rounded-3xl bg-white border border-slate-200/90 shadow-sm max-w-lg">
+                <EventCountdown size="md" showDateBadge={true} />
+              </div>
 
               {/* Host Start Button directly on Smart Board */}
               <div className="pt-2">

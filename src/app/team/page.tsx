@@ -38,6 +38,7 @@ import { IncognitoBarrier } from "@/src/components/IncognitoBarrier";
 import { BullLogo } from "@/src/components/BullLogo";
 import { CoinShowerModal } from "@/src/components/CoinShowerModal";
 import { RulesInfoModal } from "@/src/components/RulesInfoModal";
+import { EventCountdown } from "@/src/components/EventCountdown";
 
 export default function TeamTerminalPage() {
   const router = useRouter();
@@ -1080,20 +1081,25 @@ export default function TeamTerminalPage() {
       <main className="flex-1 max-w-md mx-auto w-full px-2.5 sm:px-3 py-1.5 sm:py-2 flex flex-col justify-between overflow-hidden">
         {/* LOBBY / WAITING STATE */}
         {(gameStatus === "LOBBY" || gameStatus === "READY") && (
-          <div className="my-auto text-center p-5 sm:p-6 rounded-2xl bg-white border border-slate-200/80 shadow-xs space-y-3">
-            <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center mx-auto shadow-xs">
-              <Radio className="w-6 h-6 animate-pulse" />
+          <div className="my-auto text-center p-4 sm:p-6 rounded-2xl bg-white border border-slate-200/80 shadow-xs space-y-3">
+            <div className="w-11 h-11 rounded-2xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center mx-auto shadow-xs">
+              <Radio className="w-5 h-5 animate-pulse" />
             </div>
             <div>
               <span className="text-[10px] uppercase tracking-wider text-blue-600 font-bold bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100">
-                Arena Synchronized
+                Arena Synchronized • Terminal Armed
               </span>
               <h2 className="text-xl font-black text-slate-900 tracking-tight mt-1.5">
                 Waiting for Round 1
               </h2>
-              <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto leading-relaxed">
-                Terminal is locked in secure exam mode. Do not leave this tab. The host will start the quiz shortly.
+              <p className="text-xs text-slate-500 mt-0.5 max-w-xs mx-auto leading-relaxed">
+                Terminal is locked in secure exam mode. Host will launch the live round.
               </p>
+            </div>
+
+            {/* Live Event Countdown */}
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/90 my-2">
+              <EventCountdown size="sm" showDateBadge={true} />
             </div>
 
             {team?.members && team.members.length > 0 && (
