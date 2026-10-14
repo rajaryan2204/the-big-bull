@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import fs from "fs";
 import path from "path";
 import { PrismaClient } from "@prisma/client";
+import { verifyTeamToken } from "../auth";
 import { DEMO_TEAMS } from "../../data/demoTeams";
 import { DEMO_QUESTIONS } from "../../data/demoQuestions";
 import {
@@ -677,17 +678,86 @@ export class DemoStore implements StorageEngine {
       createdAt: new Date().toISOString(),
     };
     this.sessions.set(token, session);
+
+    const prisma = getPrismaClient();
+    if (prisma) {
+      try {
+        await prisma.teamSession.upsert({
+          where: { sessionToken: token },
+          create: {
+            teamId,
+            sessionToken: token,
+            deviceInfo: session.deviceInfo,
+            ipAddress: session.ipAddress,
+            isActive: true,
+            expiresAt: exp,
+          },
+          update: {
+            isActive: true,
+            expiresAt: exp,
+          },
+        });
+      } catch (err: any) {
+        console.warn("Prisma createSession sync notice:", err.message);
+      }
+    }
+
     return session;
   }
 
   public async validateSession(token: string): Promise<{ valid: boolean; teamId?: string; session?: any }> {
-    const session = this.sessions.get(token);
+    let session = this.sessions.get(token);
+
+    if (!session) {
+      const prisma = getPrismaClient();
+      if (prisma) {
+        try {
+          const dbSess = await prisma.teamSession.findUnique({
+            where: { sessionToken: token },
+          });
+          if (dbSess) {
+            session = {
+              id: dbSess.id,
+              teamId: dbSess.teamId,
+              sessionToken: dbSess.sessionToken,
+              deviceInfo: dbSess.deviceInfo || "Browser",
+              ipAddress: dbSess.ipAddress || "127.0.0.1",
+              isActive: dbSess.isActive,
+              expiresAt: dbSess.expiresAt.toISOString(),
+              createdAt: dbSess.createdAt.toISOString(),
+            };
+            this.sessions.set(token, session);
+          }
+        } catch (err: any) {
+          console.warn("Prisma validateSession notice:", err.message);
+        }
+      }
+    }
+
+    // Cryptographic fallback for stateless serverless lambdas
+    if (!session) {
+      const payload = verifyTeamToken(token);
+      if (payload && payload.teamId) {
+        session = {
+          id: `sess-${Date.now()}`,
+          teamId: payload.teamId,
+          sessionToken: token,
+          deviceInfo: "Browser",
+          ipAddress: "127.0.0.1",
+          isActive: true,
+          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+          createdAt: new Date().toISOString(),
+        };
+        this.sessions.set(token, session);
+      }
+    }
+
     if (!session || !session.isActive) return { valid: false };
     if (new Date(session.expiresAt).getTime() < Date.now()) {
       session.isActive = false;
       return { valid: false };
     }
-    const team = this.teams.get(session.teamId);
+    const team = await this.getTeamById(session.teamId);
     if (!team) return { valid: false };
     return { valid: true, teamId: session.teamId, session };
   }
@@ -698,11 +768,32 @@ export class DemoStore implements StorageEngine {
         s.isActive = false;
       }
     }
+    const prisma = getPrismaClient();
+    if (prisma) {
+      try {
+        await prisma.teamSession.updateMany({
+          where: {
+            teamId,
+            sessionToken: { not: currentSessionToken },
+          },
+          data: { isActive: false },
+        });
+      } catch (e) {}
+    }
   }
 
   public async invalidateSession(token: string): Promise<void> {
     const session = this.sessions.get(token);
     if (session) session.isActive = false;
+    const prisma = getPrismaClient();
+    if (prisma) {
+      try {
+        await prisma.teamSession.updateMany({
+          where: { sessionToken: token },
+          data: { isActive: false },
+        });
+      } catch (e) {}
+    }
   }
 
   // --- Questions ---
