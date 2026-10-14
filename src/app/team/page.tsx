@@ -19,6 +19,7 @@ import {
   XCircle,
   Radio,
   Trophy,
+  Users,
 } from "lucide-react";
 import {
   GameState,
@@ -617,6 +618,12 @@ export default function TeamTerminalPage() {
             <div className="w-2.5 h-2.5 bg-blue-600 rounded-sm" />
             <span className="font-bold text-slate-900 truncate max-w-[120px] sm:max-w-none">{team?.name}</span>
             <span className="text-slate-400 font-mono text-[11px]">[{team?.teamCode}]</span>
+            {team?.members && team.members.length > 0 && (
+              <span className="text-[10px] text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 hidden md:inline-flex items-center gap-1 font-medium">
+                <Users className="w-2.5 h-2.5" />
+                {team.members.join(", ")}
+              </span>
+            )}
           </div>
 
           <span
@@ -678,6 +685,27 @@ export default function TeamTerminalPage() {
                 Terminal is locked in secure exam mode. Do not leave this tab. The host will start the quiz shortly.
               </p>
             </div>
+
+            {team?.members && team.members.length > 0 && (
+              <div className="mt-4 pt-3.5 border-t border-slate-100">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2 flex items-center justify-center gap-1.5">
+                  <Users className="w-3.5 h-3.5 text-blue-600" />
+                  <span>
+                    Squad Roster ({team.members.length} {team.members.length === 1 ? "Participant" : "Participants"})
+                  </span>
+                </div>
+                <div className="flex flex-wrap justify-center gap-1.5">
+                  {team.members.map((m, i) => (
+                    <span
+                      key={i}
+                      className="px-2.5 py-1 rounded-lg bg-blue-50 border border-blue-200 text-blue-800 text-xs font-semibold"
+                    >
+                      {m}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

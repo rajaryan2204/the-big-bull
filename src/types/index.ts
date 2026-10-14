@@ -29,6 +29,7 @@ export interface TeamPublic {
   id: string;
   teamCode: string;
   name: string;
+  members?: string[];
   startingBalance: number;
   currentBalance: number;
   score: number;
@@ -177,6 +178,7 @@ export interface LeaderboardEntry {
   teamId: string;
   teamCode: string;
   teamName: string;
+  members?: string[];
   score: number;
   correctAnswers: number;
   attemptedQuestions: number;

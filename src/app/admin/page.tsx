@@ -70,11 +70,23 @@ export default function AdminDashboardPage() {
 
   // Modals & Forms
   const [showAddTeamModal, setShowAddTeamModal] = useState(false);
-  const [newTeam, setNewTeam] = useState({ teamCode: "", name: "", accessCode: "", startingBalance: 5000 });
-  const [onSpotForm, setOnSpotForm] = useState({ name: "", teamCode: "", accessCode: "", startingBalance: 5000 });
-  const [recentlyCreatedTeam, setRecentlyCreatedTeam] = useState<{ teamCode: string; name: string; accessCode: string } | null>(null);
+  const [newTeam, setNewTeam] = useState<{ teamCode: string; name: string; accessCode: string; startingBalance: number; members: string[] }>({
+    teamCode: "",
+    name: "",
+    accessCode: "",
+    startingBalance: 5000,
+    members: [""],
+  });
+  const [onSpotForm, setOnSpotForm] = useState<{ name: string; teamCode: string; accessCode: string; startingBalance: number; members: string[] }>({
+    name: "",
+    teamCode: "",
+    accessCode: "",
+    startingBalance: 5000,
+    members: [""],
+  });
+  const [recentlyCreatedTeam, setRecentlyCreatedTeam] = useState<{ teamCode: string; name: string; accessCode: string; members?: string[] } | null>(null);
   const [showEditTeamModal, setShowEditTeamModal] = useState<TeamPublic | null>(null);
-  const [editTeamForm, setEditTeamForm] = useState({ name: "", newAccessCode: "" });
+  const [editTeamForm, setEditTeamForm] = useState<{ name: string; newAccessCode: string; members: string[] }>({ name: "", newAccessCode: "", members: [""] });
   const [showAddQuestionModal, setShowAddQuestionModal] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<QuestionFull | null>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -327,16 +339,20 @@ export default function AdminDashboardPage() {
   // Add Team (Standard Modal)
   const handleCreateTeam = async (e: React.FormEvent) => {
     e.preventDefault();
+    const cleanMembers = newTeam.members.map((m) => m.trim()).filter(Boolean);
     const res = await fetch("/api/admin/teams", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newTeam),
+      body: JSON.stringify({
+        ...newTeam,
+        members: cleanMembers,
+      }),
     });
     const data = await res.json();
     if (res.ok) {
       setTeams((prev) => [...prev, data.team]);
       setShowAddTeamModal(false);
-      setNewTeam({ teamCode: "", name: "", accessCode: "", startingBalance: 5000 });
+      setNewTeam({ teamCode: "", name: "", accessCode: "", startingBalance: 5000, members: [""] });
       loadInitialData();
     } else {
       alert(data.error || "Failed to create team");
@@ -348,6 +364,7 @@ export default function AdminDashboardPage() {
     e.preventDefault();
     const code = (onSpotForm.teamCode.trim() || getNextSuggestedCode()).toUpperCase();
     const pass = onSpotForm.accessCode.trim() || code;
+    const cleanMembers = onSpotForm.members.map((m) => m.trim()).filter(Boolean);
     const res = await fetch("/api/admin/teams", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -356,6 +373,7 @@ export default function AdminDashboardPage() {
         name: onSpotForm.name.trim(),
         accessCode: pass,
         startingBalance: onSpotForm.startingBalance || 5000,
+        members: cleanMembers,
       }),
     });
     const data = await res.json();
@@ -365,26 +383,31 @@ export default function AdminDashboardPage() {
         teamCode: code,
         name: onSpotForm.name.trim(),
         accessCode: pass,
+        members: cleanMembers,
       });
-      setOnSpotForm({ name: "", teamCode: "", accessCode: "", startingBalance: 5000 });
+      setOnSpotForm({ name: "", teamCode: "", accessCode: "", startingBalance: 5000, members: [""] });
       loadInitialData();
     } else {
       alert(data.error || "Failed to create team");
     }
   };
 
-  // Save Team Edits (Name & New Access Code)
+  // Save Team Edits (Name, Members & New Access Code)
   const handleSaveTeamEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!showEditTeamModal) return;
     try {
-      if (editTeamForm.name.trim() && editTeamForm.name !== showEditTeamModal.name) {
-        await fetch("/api/admin/teams", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: showEditTeamModal.id, name: editTeamForm.name.trim() }),
-        });
-      }
+      const cleanMembers = editTeamForm.members.map((m) => m.trim()).filter(Boolean);
+      await fetch("/api/admin/teams", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: showEditTeamModal.id,
+          name: editTeamForm.name.trim(),
+          members: cleanMembers,
+        }),
+      });
+
       if (editTeamForm.newAccessCode.trim()) {
         await fetch("/api/admin/teams", {
           method: "PUT",
@@ -956,52 +979,106 @@ export default function AdminDashboardPage() {
                 </span>
               </div>
 
-              <form onSubmit={handleOnSpotCreate} className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Team / Squad Name *</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Apex Predators"
-                    value={onSpotForm.name}
-                    onChange={(e) => setOnSpotForm({ ...onSpotForm, name: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white focus:border-blue-600 outline-none transition"
-                    required
-                  />
+              <form onSubmit={handleOnSpotCreate} className="space-y-3.5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Team / Squad Name *</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Apex Predators"
+                      value={onSpotForm.name}
+                      onChange={(e) => setOnSpotForm({ ...onSpotForm, name: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm focus:bg-white focus:border-blue-600 outline-none transition"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Team Code
+                    </label>
+                    <input
+                      type="text"
+                      placeholder={getNextSuggestedCode()}
+                      value={onSpotForm.teamCode}
+                      onChange={(e) => setOnSpotForm({ ...onSpotForm, teamCode: e.target.value.toUpperCase() })}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-mono text-xs sm:text-sm focus:bg-white focus:border-blue-600 outline-none transition"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">
+                      Access Code (Auto-Matches)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Same as Team Code"
+                      value={onSpotForm.accessCode}
+                      onChange={(e) => setOnSpotForm({ ...onSpotForm, accessCode: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-mono text-xs sm:text-sm focus:bg-white focus:border-blue-600 outline-none transition"
+                    />
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Team Code
-                  </label>
-                  <input
-                    type="text"
-                    placeholder={getNextSuggestedCode()}
-                    value={onSpotForm.teamCode}
-                    onChange={(e) => setOnSpotForm({ ...onSpotForm, teamCode: e.target.value.toUpperCase() })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-mono text-xs focus:bg-white focus:border-blue-600 outline-none transition"
-                  />
+                {/* Dynamic Participants list */}
+                <div className="p-3 bg-slate-50/70 rounded-xl border border-slate-200/80 space-y-2">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                      <Users className="w-3.5 h-3.5 text-blue-600" />
+                      <span>Team Members / Participants ({onSpotForm.members.length} {onSpotForm.members.length === 1 ? "Member (Solo)" : "Members"})</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setOnSpotForm({ ...onSpotForm, members: [...onSpotForm.members, ""] })}
+                      className="text-[11px] font-bold text-blue-600 hover:text-blue-800 bg-white hover:bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-200 flex items-center gap-1 transition cursor-pointer"
+                    >
+                      <Plus className="w-3 h-3" />
+                      <span>Add Participant</span>
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                    {onSpotForm.members.map((member, idx) => (
+                      <div key={idx} className="flex items-center gap-1.5">
+                        <input
+                          type="text"
+                          placeholder={`Participant #${idx + 1} Name`}
+                          value={member}
+                          onChange={(e) => {
+                            const updated = [...onSpotForm.members];
+                            updated[idx] = e.target.value;
+                            setOnSpotForm({ ...onSpotForm, members: updated });
+                          }}
+                          className="flex-1 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-900 text-xs focus:border-blue-600 outline-none transition"
+                        />
+                        {onSpotForm.members.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = onSpotForm.members.filter((_, i) => i !== idx);
+                              setOnSpotForm({ ...onSpotForm, members: updated });
+                            }}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
+                            title="Remove Participant"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-slate-500">
+                    💡 If solo participant, leave as 1. For 2, 3 or more members, click <strong>+ Add Participant</strong>.
+                  </p>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Access Code (Auto-Matches)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Same as Team Code"
-                    value={onSpotForm.accessCode}
-                    onChange={(e) => setOnSpotForm({ ...onSpotForm, accessCode: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-mono text-xs focus:bg-white focus:border-blue-600 outline-none transition"
-                  />
-                </div>
-
-                <div className="flex items-end">
+                <div className="flex justify-end">
                   <button
                     type="submit"
-                    className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer min-h-[38px]"
+                    className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer min-h-[40px]"
                   >
                     <Plus className="w-4 h-4" />
-                    <span>⚡ Register & Issue Pass</span>
+                    <span>⚡ Register Squad & Issue Pass</span>
                   </button>
                 </div>
               </form>
@@ -1009,18 +1086,37 @@ export default function AdminDashboardPage() {
               {/* Instant Team Pass Notice */}
               {recentlyCreatedTeam && (
                 <div className="p-3.5 rounded-xl bg-blue-50 border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span className="text-slate-800">
-                      <strong>{recentlyCreatedTeam.name}</strong> registered! Code: <code className="font-mono font-bold text-blue-700 bg-white px-1.5 py-0.5 rounded border border-blue-200">{recentlyCreatedTeam.teamCode}</code> • Password: <code className="font-mono font-bold text-blue-700 bg-white px-1.5 py-0.5 rounded border border-blue-200">{recentlyCreatedTeam.accessCode}</code>
-                    </span>
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                    <div className="text-slate-800 space-y-0.5">
+                      <div>
+                        <strong>{recentlyCreatedTeam.name}</strong> registered! Code:{" "}
+                        <code className="font-mono font-bold text-blue-700 bg-white px-1.5 py-0.5 rounded border border-blue-200">
+                          {recentlyCreatedTeam.teamCode}
+                        </code>{" "}
+                        • Password:{" "}
+                        <code className="font-mono font-bold text-blue-700 bg-white px-1.5 py-0.5 rounded border border-blue-200">
+                          {recentlyCreatedTeam.accessCode}
+                        </code>
+                      </div>
+                      {recentlyCreatedTeam.members && recentlyCreatedTeam.members.length > 0 && (
+                        <div className="text-[11px] text-slate-600 flex items-center gap-1">
+                          <Users className="w-3 h-3 text-blue-600" />
+                          <span>Members: <strong>{recentlyCreatedTeam.members.join(", ")}</strong></span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <button
                     onClick={() => {
+                      const memberInfo =
+                        recentlyCreatedTeam.members && recentlyCreatedTeam.members.length > 0
+                          ? `\nMembers: ${recentlyCreatedTeam.members.join(", ")}`
+                          : "";
                       navigator.clipboard.writeText(
-                        `THE BIG BULL - Team Login Credentials\nSquad: ${recentlyCreatedTeam.name}\nTeam Code: ${recentlyCreatedTeam.teamCode}\nAccess Code: ${recentlyCreatedTeam.accessCode}\nURL: https://the-big-bull.vercel.app/`
+                        `THE BIG BULL - Team Login Credentials\nSquad: ${recentlyCreatedTeam.name}\nTeam Code: ${recentlyCreatedTeam.teamCode}\nAccess Code: ${recentlyCreatedTeam.accessCode}${memberInfo}\nURL: https://the-big-bull.vercel.app/`
                       );
-                      alert("Team credentials copied to clipboard!");
+                      alert("Team credentials & member pass copied to clipboard!");
                     }}
                     className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-1 cursor-pointer shrink-0 transition"
                   >
@@ -1050,7 +1146,19 @@ export default function AdminDashboardPage() {
                   {teams.map((t) => (
                     <tr key={t.id} className="hover:bg-slate-50/80 transition">
                       <td className="py-3 px-4 font-mono font-bold text-blue-700">{t.teamCode}</td>
-                      <td className="py-3 px-4 font-semibold text-slate-900">{t.name}</td>
+                      <td className="py-3 px-4">
+                        <div className="font-semibold text-slate-900">{t.name}</div>
+                        {t.members && t.members.length > 0 ? (
+                          <div className="flex flex-wrap items-center gap-1 mt-1">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
+                              <Users className="w-2.5 h-2.5 text-blue-600" />
+                              {t.members.length === 1 ? "Solo" : `${t.members.length} Members`}: {t.members.join(", ")}
+                            </span>
+                          </div>
+                        ) : (
+                          <div className="text-[10px] text-slate-400 italic mt-0.5">No members assigned</div>
+                        )}
+                      </td>
                       <td className="py-3 px-4 font-mono text-slate-500">
                         <div className="flex items-center gap-1.5">
                           <span>{t.teamCode}</span>
@@ -1107,10 +1215,14 @@ export default function AdminDashboardPage() {
                         <button
                           onClick={() => {
                             setShowEditTeamModal(t);
-                            setEditTeamForm({ name: t.name, newAccessCode: "" });
+                            setEditTeamForm({
+                              name: t.name,
+                              newAccessCode: "",
+                              members: t.members && t.members.length > 0 ? [...t.members] : [""],
+                            });
                           }}
                           className="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 font-semibold text-[11px] cursor-pointer transition inline-flex items-center gap-1"
-                          title="Edit Name / Reset Password"
+                          title="Edit Name, Members / Reset Password"
                         >
                           <Edit2 className="w-3 h-3" />
                           <span>Edit</span>
@@ -1455,6 +1567,55 @@ export default function AdminDashboardPage() {
                 />
               </div>
 
+              {/* Dynamic Participants list */}
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                    <Users className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Participants ({newTeam.members.length})</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setNewTeam({ ...newTeam, members: [...newTeam.members, ""] })}
+                    className="text-[11px] font-bold text-blue-600 hover:text-blue-800 bg-white hover:bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-200 flex items-center gap-1 transition cursor-pointer"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>Add Member</span>
+                  </button>
+                </div>
+
+                <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                  {newTeam.members.map((member, idx) => (
+                    <div key={idx} className="flex items-center gap-1.5">
+                      <input
+                        type="text"
+                        placeholder={`Participant #${idx + 1}`}
+                        value={member}
+                        onChange={(e) => {
+                          const updated = [...newTeam.members];
+                          updated[idx] = e.target.value;
+                          setNewTeam({ ...newTeam, members: updated });
+                        }}
+                        className="flex-1 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-900 text-xs focus:border-blue-600 outline-none transition"
+                      />
+                      {newTeam.members.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = newTeam.members.filter((_, i) => i !== idx);
+                            setNewTeam({ ...newTeam, members: updated });
+                          }}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
+                          title="Remove"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
@@ -1485,7 +1646,7 @@ export default function AdminDashboardPage() {
                   Edit Squad: {showEditTeamModal.teamCode}
                 </h3>
                 <p className="text-xs text-slate-500">
-                  Update team name or reset their secret login code.
+                  Update team name, participants list, or reset login code.
                 </p>
               </div>
               <button
@@ -1506,6 +1667,55 @@ export default function AdminDashboardPage() {
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-sm focus:border-blue-600 focus:bg-white focus:outline-hidden transition"
                   required
                 />
+              </div>
+
+              {/* Dynamic Participants list */}
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                    <Users className="w-3.5 h-3.5 text-blue-600" />
+                    <span>Participants ({editTeamForm.members.length})</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setEditTeamForm({ ...editTeamForm, members: [...editTeamForm.members, ""] })}
+                    className="text-[11px] font-bold text-blue-600 hover:text-blue-800 bg-white hover:bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-200 flex items-center gap-1 transition cursor-pointer"
+                  >
+                    <Plus className="w-3 h-3" />
+                    <span>Add Member</span>
+                  </button>
+                </div>
+
+                <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                  {editTeamForm.members.map((member, idx) => (
+                    <div key={idx} className="flex items-center gap-1.5">
+                      <input
+                        type="text"
+                        placeholder={`Participant #${idx + 1}`}
+                        value={member}
+                        onChange={(e) => {
+                          const updated = [...editTeamForm.members];
+                          updated[idx] = e.target.value;
+                          setEditTeamForm({ ...editTeamForm, members: updated });
+                        }}
+                        className="flex-1 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-900 text-xs focus:border-blue-600 outline-none transition"
+                      />
+                      {editTeamForm.members.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = editTeamForm.members.filter((_, i) => i !== idx);
+                            setEditTeamForm({ ...editTeamForm, members: updated });
+                          }}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
+                          title="Remove"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
 
               <div>

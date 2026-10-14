@@ -412,7 +412,15 @@ export default function SmartBoardPage() {
                       </td>
                       <td className="py-4 px-6">
                         <div className="font-bold text-slate-900 text-base">{entry.teamName}</div>
-                        <div className="text-xs text-slate-400 font-mono">{entry.teamCode}</div>
+                        <div className="flex items-center flex-wrap gap-2 mt-1">
+                          <span className="text-xs text-slate-400 font-mono">{entry.teamCode}</span>
+                          {entry.members && entry.members.length > 0 && (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-200">
+                              <Users className="w-2.5 h-2.5 text-blue-600" />
+                              {entry.members.join(", ")}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="py-4 px-6 text-center text-lg font-black text-blue-600">
                         {entry.score.toLocaleString()} pts

@@ -22,6 +22,7 @@ model Team {
   id                  String               @id @default(cuid())
   teamCode            String               @unique // e.g. BULLS-101
   name                String
+  members             String[]             @default([])
   accessCodeHash      String               // bcrypt hash of the secret access code
   startingBalance     Int                  @default(5000)
   currentBalance      Int                  @default(5000)

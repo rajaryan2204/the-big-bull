@@ -33,8 +33,8 @@ export interface StorageEngine {
   getAllTeams(): Promise<TeamPublic[]>;
   getTeamById(id: string): Promise<TeamPublic | null>;
   getTeamByCode(teamCode: string): Promise<TeamPublic | null>;
-  createTeam(teamCode: string, name: string, accessCode: string, startingBalance?: number): Promise<TeamPublic>;
-  updateTeam(id: string, updates: Partial<{ name: string; isDisabled: boolean; isActive: boolean }>): Promise<TeamPublic>;
+  createTeam(teamCode: string, name: string, accessCode: string, startingBalance?: number, members?: string[]): Promise<TeamPublic>;
+  updateTeam(id: string, updates: Partial<{ name: string; members: string[]; isDisabled: boolean; isActive: boolean }>): Promise<TeamPublic>;
   deleteTeam(id: string): Promise<boolean>;
   resetTeamAccessCode(id: string, newAccessCode: string): Promise<void>;
   setTeamConnectionStatus(id: string, status: "CONNECTED" | "DISCONNECTED"): Promise<void>;
@@ -216,6 +216,7 @@ export class DemoStore implements StorageEngine {
           id: t.id,
           teamCode: t.teamCode,
           name: t.name,
+          members: Array.isArray(t.members) ? t.members : [],
           accessCodeHash: t.accessCodeHash,
           startingBalance: t.startingBalance,
           currentBalance: t.currentBalance,
@@ -287,6 +288,7 @@ export class DemoStore implements StorageEngine {
         id: teamId,
         teamCode: t.teamCode,
         name: t.name,
+        members: t.members || [],
         accessCodeHash: hash,
         startingBalance: t.startingBalance,
         currentBalance: t.startingBalance,
@@ -366,7 +368,8 @@ export class DemoStore implements StorageEngine {
     teamCode: string,
     name: string,
     accessCode: string,
-    startingBalance = 5000
+    startingBalance = 5000,
+    members: string[] = []
   ): Promise<TeamPublic> {
     const code = teamCode.trim().toUpperCase();
     for (const t of this.teams.values()) {
@@ -376,10 +379,12 @@ export class DemoStore implements StorageEngine {
     }
     const hash = bcrypt.hashSync(accessCode.trim(), 10);
     const id = `team-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+    const cleanMembers = (members || []).map((m) => m.trim()).filter(Boolean);
     const record = {
       id,
       teamCode: code,
       name: name.trim(),
+      members: cleanMembers,
       accessCodeHash: hash,
       startingBalance,
       currentBalance: startingBalance,
@@ -396,6 +401,29 @@ export class DemoStore implements StorageEngine {
       updatedAt: new Date().toISOString(),
     };
     this.teams.set(id, record);
+
+    const prisma = getPrismaClient();
+    if (prisma) {
+      prisma.team
+        .create({
+          data: {
+            id,
+            teamCode: code,
+            name: record.name,
+            members: cleanMembers,
+            accessCodeHash: hash,
+            startingBalance,
+            currentBalance: startingBalance,
+            score: 0,
+            correctAnswers: 0,
+            attemptedQuestions: 0,
+            isActive: true,
+            isDisabled: false,
+            connectionStatus: "DISCONNECTED",
+          },
+        })
+        .catch((err) => console.warn("Prisma team create sync notice:", err.message));
+    }
 
     this.coinTransactions.push({
       id: `tx-init-${Date.now()}`,
@@ -415,22 +443,47 @@ export class DemoStore implements StorageEngine {
 
   public async updateTeam(
     id: string,
-    updates: Partial<{ name: string; isDisabled: boolean; isActive: boolean }>
+    updates: Partial<{ name: string; members: string[]; isDisabled: boolean; isActive: boolean }>
   ): Promise<TeamPublic> {
     const team = this.teams.get(id);
     if (!team) throw new Error("Team not found");
     if (updates.name !== undefined) team.name = updates.name.trim();
+    if (updates.members !== undefined) {
+      team.members = updates.members.map((m: string) => m.trim()).filter(Boolean);
+    }
     if (updates.isDisabled !== undefined) team.isDisabled = updates.isDisabled;
     if (updates.isActive !== undefined) team.isActive = updates.isActive;
     team.updatedAt = new Date().toISOString();
     this.teams.set(id, team);
+
+    const prisma = getPrismaClient();
+    if (prisma) {
+      const updateData: any = {};
+      if (updates.name !== undefined) updateData.name = team.name;
+      if (updates.members !== undefined) updateData.members = team.members;
+      if (updates.isDisabled !== undefined) updateData.isDisabled = team.isDisabled;
+      if (updates.isActive !== undefined) updateData.isActive = team.isActive;
+      prisma.team
+        .update({
+          where: { id },
+          data: updateData,
+        })
+        .catch((err) => console.warn("Prisma team update sync notice:", err.message));
+    }
+
     this.saveToFile();
     return this.toPublicTeam(team);
   }
 
   public async deleteTeam(id: string): Promise<boolean> {
     const deleted = this.teams.delete(id);
-    if (deleted) this.saveToFile();
+    if (deleted) {
+      const prisma = getPrismaClient();
+      if (prisma) {
+        prisma.team.delete({ where: { id } }).catch((err) => console.warn("Prisma team delete notice:", err.message));
+      }
+      this.saveToFile();
+    }
     return deleted;
   }
 
@@ -1093,6 +1146,7 @@ export class DemoStore implements StorageEngine {
       teamId: t.id,
       teamCode: t.teamCode,
       teamName: t.name,
+      members: Array.isArray(t.members) ? t.members : [],
       score: t.score,
       correctAnswers: t.correctAnswers,
       attemptedQuestions: t.attemptedQuestions,
@@ -1222,6 +1276,7 @@ export class DemoStore implements StorageEngine {
       id: t.id,
       teamCode: t.teamCode,
       name: t.name,
+      members: Array.isArray(t.members) ? t.members : [],
       startingBalance: t.startingBalance,
       currentBalance: t.currentBalance,
       score: t.score,

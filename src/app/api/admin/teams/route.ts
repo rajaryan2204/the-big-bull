@@ -28,14 +28,19 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { teamCode, name, accessCode, startingBalance } = await req.json();
+    const { teamCode, name, accessCode, startingBalance, members } = await req.json();
     if (!teamCode || !name || !accessCode) {
       return NextResponse.json({ error: "teamCode, name, and accessCode required" }, { status: 400 });
     }
 
     const storage = await getStorage();
-    const created = await storage.createTeam(teamCode, name, accessCode, startingBalance || 5000);
-    await storage.logAudit("TEAM_CREATED", "ADMIN", { teamCode, name });
+    const created = await storage.createTeam(teamCode, name, accessCode, startingBalance || 5000, members || []);
+    await storage.logAudit("TEAM_CREATED", "ADMIN", { teamCode, name, members: members || [] });
+
+    try {
+      const { getGameEngine } = await import("@/src/server/gameEngine");
+      await getGameEngine().broadcastAll();
+    } catch (e) {}
 
     return NextResponse.json({ success: true, team: created });
   } catch (err: any) {
@@ -89,9 +94,13 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ success: true, team: updated, message: "Strikes reset successfully" });
     }
 
-    // Standard updates (name, isDisabled, isActive)
+    // Standard updates (name, isDisabled, isActive, members)
     const updated = await storage.updateTeam(id, data);
     await storage.logAudit("TEAM_UPDATED", "ADMIN", { teamId: id, updates: data });
+    try {
+      const { getGameEngine } = await import("@/src/server/gameEngine");
+      await getGameEngine().broadcastAll();
+    } catch (e) {}
     return NextResponse.json({ success: true, team: updated });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 400 });

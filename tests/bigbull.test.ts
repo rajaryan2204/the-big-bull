@@ -405,4 +405,51 @@ describe("THE BIG BULL - Comprehensive Game Rules & Security Tests", () => {
     const gameReEnabled = await store.getCurrentGame();
     expect(gameReEnabled.requireIncognito).toBe(true);
   });
+
+  // 26. Team Members / Participants Support (Solo, Pairs, Trios)
+  it("Rule 26: Should store and return team members for solo, pairs, and squads", async () => {
+    // 3-member squad (Team A)
+    const squadA = await store.createTeam(
+      "SQUAD-A",
+      "Apex Alpha",
+      "SECRET-A",
+      5000,
+      ["Aarav Sharma", "Priya Patel", "Rohan Gupta"]
+    );
+    expect(squadA.members).toHaveLength(3);
+    expect(squadA.members).toEqual(["Aarav Sharma", "Priya Patel", "Rohan Gupta"]);
+
+    // 1-member solo team (Team B)
+    const soloB = await store.createTeam(
+      "SOLO-B",
+      "Lone Wolf",
+      "SECRET-B",
+      5000,
+      ["Kabir Mehta"]
+    );
+    expect(soloB.members).toHaveLength(1);
+    expect(soloB.members).toEqual(["Kabir Mehta"]);
+
+    // Dynamic member update (edit members)
+    const updated = await store.updateTeam(squadA.id, {
+      members: ["Aarav Sharma", "Priya Patel"], // Rohan removed, now pair of 2
+    });
+    expect(updated.members).toHaveLength(2);
+    expect(updated.members).toEqual(["Aarav Sharma", "Priya Patel"]);
+  });
+
+  // 27. Leaderboard includes squad members
+  it("Rule 27: Leaderboard entries must include squad members", async () => {
+    const squad = await store.createTeam(
+      "LEAD-SQUAD",
+      "Leaderboard Champions",
+      "SECRET-C",
+      5000,
+      ["Player One", "Player Two"]
+    );
+    const lb = await store.getLeaderboard();
+    const found = lb.find((e) => e.teamId === squad.id);
+    expect(found).toBeDefined();
+    expect(found?.members).toEqual(["Player One", "Player Two"]);
+  });
 });
