@@ -29,6 +29,8 @@ import {
   LifelineType,
   LeaderboardEntry,
 } from "@/src/types";
+import { detectIncognito } from "@/src/lib/detectIncognito";
+import { IncognitoBarrier } from "@/src/components/IncognitoBarrier";
 
 export default function TeamTerminalPage() {
   const router = useRouter();
@@ -49,6 +51,28 @@ export default function TeamTerminalPage() {
   const [lockdownReason, setLockdownReason] = useState<string>("");
   const [strikes, setStrikes] = useState<number>(0);
   const [isDisqualified, setIsDisqualified] = useState<boolean>(false);
+
+  // Incognito Security Enforcement
+  const [isIncognito, setIsIncognito] = useState<boolean | null>(null);
+  const [browserName, setBrowserName] = useState<string>("Browser");
+  const [checkingIncognito, setCheckingIncognito] = useState<boolean>(true);
+
+  const checkIncognitoStatus = useCallback(async () => {
+    setCheckingIncognito(true);
+    try {
+      const res = await detectIncognito();
+      setIsIncognito(res.isPrivate);
+      setBrowserName(res.browserName);
+    } catch {
+      setIsIncognito(false);
+    } finally {
+      setCheckingIncognito(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    checkIncognitoStatus();
+  }, [checkIncognitoStatus]);
 
   // Modals
   const [confirmModal, setConfirmModal] = useState<{
@@ -444,6 +468,20 @@ export default function TeamTerminalPage() {
   const timerDisplay = `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
 
   // ==========================================
+  // VIEW 0: INCOGNITO ENFORCEMENT BARRIER
+  // ==========================================
+  const requireIncognito = gameState?.requireIncognito ?? true;
+  if (requireIncognito && isIncognito === false) {
+    return (
+      <IncognitoBarrier
+        browserName={browserName}
+        onRecheck={checkIncognitoStatus}
+        isChecking={checkingIncognito}
+      />
+    );
+  }
+
+  // ==========================================
   // VIEW 1: GATEWAY (MANDATORY FULLSCREEN LOCK)
   // ==========================================
   if (!hasEnteredTerminal) {
@@ -459,9 +497,17 @@ export default function TeamTerminalPage() {
               THE BIG BULL // ARENA PROTOCOL
             </span>
           </div>
-          <span className="font-mono text-[11px] text-neutral-400">
-            TERMINAL: {team?.teamCode}
-          </span>
+          <div className="flex items-center gap-2">
+            {requireIncognito && isIncognito && (
+              <span className="px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/40 text-emerald-400 font-mono text-[10px] font-bold flex items-center gap-1">
+                <Shield className="w-3 h-3" />
+                INCOGNITO VERIFIED
+              </span>
+            )}
+            <span className="font-mono text-[11px] text-neutral-400">
+              TERMINAL: {team?.teamCode}
+            </span>
+          </div>
         </div>
 
         <main className="max-w-lg mx-auto w-full text-center space-y-6 my-auto">

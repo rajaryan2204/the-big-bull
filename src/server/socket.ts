@@ -303,6 +303,35 @@ export function setupSocketServer(httpServer: HttpServer): SocketIOServer {
       }
     });
 
+    socket.on("admin:update_settings", async (settings: any, callback) => {
+      try {
+        if (!isAdmin) throw new Error("Unauthorized admin command");
+        await storage.updateGameSettings(settings);
+        await gameEngine.broadcastAll();
+        if (callback) callback({ success: true });
+      } catch (e: any) {
+        if (callback) callback({ success: false, error: e.message });
+      }
+    });
+
+    socket.on("admin:toggle_incognito", async (options: any, callback) => {
+      try {
+        if (!isAdmin) throw new Error("Unauthorized admin command");
+        const curGame = await storage.getCurrentGame();
+        const newVal = options?.requireIncognito !== undefined ? !!options.requireIncognito : !curGame.requireIncognito;
+        await storage.updateGameSettings({ requireIncognito: newVal });
+        await storage.logAudit(
+          newVal ? "INCOGNITO_ENFORCEMENT_ENABLED" : "INCOGNITO_ENFORCEMENT_DISABLED",
+          "ADMIN",
+          { requireIncognito: newVal }
+        );
+        await gameEngine.broadcastAll();
+        if (callback) callback({ success: true, requireIncognito: newVal });
+      } catch (e: any) {
+        if (callback) callback({ success: false, error: e.message });
+      }
+    });
+
     // --- Disconnect Handler ---
 
     socket.on("disconnect", async () => {

@@ -68,6 +68,25 @@ export async function POST(req: NextRequest) {
         await gameEngine.resetGame(options);
         break;
 
+      case "update_settings":
+      case "admin:update_settings":
+        await storage.updateGameSettings(options || {});
+        await gameEngine.broadcastAll();
+        break;
+
+      case "toggle_incognito":
+      case "admin:toggle_incognito":
+        const curGame = await storage.getCurrentGame();
+        const newVal = options?.requireIncognito !== undefined ? !!options.requireIncognito : !curGame.requireIncognito;
+        await storage.updateGameSettings({ requireIncognito: newVal });
+        await storage.logAudit(
+          newVal ? "INCOGNITO_ENFORCEMENT_ENABLED" : "INCOGNITO_ENFORCEMENT_DISABLED",
+          "ADMIN",
+          { requireIncognito: newVal }
+        );
+        await gameEngine.broadcastAll();
+        break;
+
       default:
         return NextResponse.json({ error: `Unknown control action: ${action}` }, { status: 400 });
     }

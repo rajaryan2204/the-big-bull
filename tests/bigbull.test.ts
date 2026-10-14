@@ -388,4 +388,21 @@ describe("THE BIG BULL - Comprehensive Game Rules & Security Tests", () => {
     expect(tAfter?.strikesCount).toBe(0);
     expect(tAfter?.isDisqualified).toBe(false);
   });
+
+  // 24. Incognito Enforcement Default
+  it("Rule 24: Should default requireIncognito to true in authoritative GameState", async () => {
+    const game = await store.getCurrentGame();
+    expect(game.requireIncognito).toBe(true);
+  });
+
+  // 25. Incognito Setting Toggle
+  it("Rule 25: Should allow updating requireIncognito setting for admin bypass", async () => {
+    await store.updateGameSettings({ requireIncognito: false });
+    const gameDisabled = await store.getCurrentGame();
+    expect(gameDisabled.requireIncognito).toBe(false);
+
+    await store.updateGameSettings({ requireIncognito: true });
+    const gameReEnabled = await store.getCurrentGame();
+    expect(gameReEnabled.requireIncognito).toBe(true);
+  });
 });

@@ -94,6 +94,7 @@ export interface GameState {
   defaultQuestionDuration: number;
   oneActiveSessionPerTeam: boolean;
   examMode: boolean;
+  requireIncognito?: boolean;
   allowAnswerChange: boolean;
   allowRepeatLifelines: boolean;
   publicLeaderboardColumns: string;

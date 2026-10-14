@@ -231,6 +231,11 @@ export default function AdminDashboardPage() {
     }
   };
 
+  const toggleIncognito = async () => {
+    const nextVal = !(gameState?.requireIncognito ?? true);
+    await sendAdminCommand("admin:toggle_incognito", { requireIncognito: nextVal });
+  };
+
   // HTTP Polling Fallback (ensures live telemetry updates if WebSockets disconnect or on Vercel)
   useEffect(() => {
     if (!authenticated) return;
@@ -570,11 +575,28 @@ export default function AdminDashboardPage() {
 
             {/* Quick Live Control Bar */}
             <div className="p-6 rounded-2xl bg-[#121218] border border-[#242434] flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <h3 className="text-base font-bold text-white">Live Game Controller</h3>
-                <p className="text-xs text-neutral-400">
-                  Authoritative controls synchronized across Smart Board and Team Phones.
-                </p>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <div>
+                  <h3 className="text-base font-bold text-white">Live Game Controller</h3>
+                  <p className="text-xs text-neutral-400">
+                    Authoritative controls synchronized across Smart Board and Team Phones.
+                  </p>
+                </div>
+
+                <button
+                  onClick={toggleIncognito}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-mono font-bold transition cursor-pointer self-start sm:self-auto ${
+                    (gameState?.requireIncognito ?? true)
+                      ? "bg-emerald-950/40 border-emerald-500/40 text-emerald-400 hover:bg-emerald-900/40"
+                      : "bg-red-950/40 border-red-500/40 text-red-400 hover:bg-red-900/40"
+                  }`}
+                  title="Click to toggle Incognito Requirement for all participants"
+                >
+                  <Shield className="w-3.5 h-3.5" />
+                  <span>
+                    INCOGNITO GATE: {(gameState?.requireIncognito ?? true) ? "ON (STRICT)" : "OFF (PARDONED)"}
+                  </span>
+                </button>
               </div>
 
               <div className="flex flex-wrap items-center gap-2.5">
@@ -1087,9 +1109,49 @@ export default function AdminDashboardPage() {
                   Anti-Cheating & Invigilation Alerts
                 </h3>
                 <p className="text-xs text-neutral-400 mt-1">
-                  Client-side Page Visibility API monitoring and window blur events logged in real time.
+                  Client-side Page Visibility API monitoring, window blur events, and Incognito enforcement.
                 </p>
               </div>
+            </div>
+
+            {/* Incognito Security Gate Master Card */}
+            <div className="p-5 rounded-2xl bg-[#121219] border border-[#232334] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-xs font-bold uppercase tracking-wider text-amber-400">
+                    ANTI-CHEAT LAYER 1: BROWSER ENFORCEMENT GATE
+                  </span>
+                  <span
+                    className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold ${
+                      (gameState?.requireIncognito ?? true)
+                        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
+                        : "bg-neutral-800 text-neutral-400 border border-neutral-700"
+                    }`}
+                  >
+                    {(gameState?.requireIncognito ?? true) ? "ENFORCED" : "BYPASSED"}
+                  </span>
+                </div>
+                <h4 className="text-base font-bold text-white">Private / Incognito Browsing Restriction</h4>
+                <p className="text-xs text-neutral-400 max-w-2xl leading-relaxed">
+                  Requires all student terminals on <code className="text-amber-300">/join</code> and <code className="text-amber-300">/team</code> to be opened in an Incognito / Private window. Neutralizes AI solver extensions, auto-fill, and cached history.
+                </p>
+              </div>
+
+              <button
+                onClick={toggleIncognito}
+                className={`px-4 py-2.5 rounded-xl font-mono text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shrink-0 ${
+                  (gameState?.requireIncognito ?? true)
+                    ? "bg-emerald-500 hover:bg-emerald-400 text-black shadow-lg shadow-emerald-500/20"
+                    : "bg-[#1f1f2e] border border-[#35354a] hover:border-amber-500/40 text-neutral-200"
+                }`}
+              >
+                <Shield className="w-4 h-4" />
+                <span>
+                  {(gameState?.requireIncognito ?? true)
+                    ? "INCOGNITO: STRICT (CLICK TO PARDON)"
+                    : "INCOGNITO: PARDONED (CLICK TO ENFORCE)"}
+                </span>
+              </button>
             </div>
 
             <div className="rounded-2xl border border-[#22222e] bg-[#111116] overflow-hidden">

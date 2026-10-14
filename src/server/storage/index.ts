@@ -636,6 +636,7 @@ export class DemoStore implements StorageEngine {
       defaultQuestionDuration: options?.defaultQuestionDuration ?? 300,
       oneActiveSessionPerTeam: options?.oneActiveSessionPerTeam ?? true,
       examMode: options?.examMode ?? false,
+      requireIncognito: options?.requireIncognito ?? true,
       allowAnswerChange: options?.allowAnswerChange ?? false,
       allowRepeatLifelines: options?.allowRepeatLifelines ?? false,
       publicLeaderboardColumns: options?.publicLeaderboardColumns || "rank,name,score,coins,correct",
@@ -1286,6 +1287,7 @@ export class DemoStore implements StorageEngine {
       connectedTeamsCount: connected,
       totalAnswersReceived: countAnswers,
       currentQuestion: currentGQ ? this.toGameQuestionState(currentGQ, isReveal) : null,
+      requireIncognito: this.game?.requireIncognito ?? true,
       isDemoMode: this.isDemoMode,
     };
   }

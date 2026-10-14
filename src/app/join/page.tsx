@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   Key,
@@ -11,7 +11,10 @@ import {
   Lock,
   Radio,
   Flame,
+  Shield,
 } from "lucide-react";
+import { detectIncognito } from "@/src/lib/detectIncognito";
+import { IncognitoBarrier } from "@/src/components/IncognitoBarrier";
 
 export default function TeamLoginPage() {
   const router = useRouter();
@@ -20,6 +23,12 @@ export default function TeamLoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [checkingExisting, setCheckingExisting] = useState(true);
+
+  // Incognito Security Enforcement
+  const [isIncognito, setIsIncognito] = useState<boolean | null>(null);
+  const [browserName, setBrowserName] = useState<string>("Browser");
+  const [requireIncognito, setRequireIncognito] = useState<boolean>(true);
+  const [checkingIncognito, setCheckingIncognito] = useState<boolean>(true);
 
   const demoTeams = [
     { code: "BULLS-101", name: "Apex Predators" },
@@ -32,14 +41,41 @@ export default function TeamLoginPage() {
     { code: "BULLS-108", name: "Golden Horns" },
   ];
 
+  const checkIncognitoStatus = useCallback(async () => {
+    setCheckingIncognito(true);
+    try {
+      const res = await detectIncognito();
+      setIsIncognito(res.isPrivate);
+      setBrowserName(res.browserName);
+    } catch {
+      setIsIncognito(false);
+    } finally {
+      setCheckingIncognito(false);
+    }
+  }, []);
+
   useEffect(() => {
+    // 1. Fetch game settings for requireIncognito
+    fetch("/api/game/state")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.game) {
+          setRequireIncognito(data.game.requireIncognito !== false);
+        }
+      })
+      .catch(() => {});
+
+    // 2. Check incognito mode
+    checkIncognitoStatus();
+
+    // 3. Existing auth check
     fetch("/api/auth/team/me")
       .then((res) => {
         if (res.ok) router.replace("/team");
       })
       .catch(() => {})
       .finally(() => setCheckingExisting(false));
-  }, [router]);
+  }, [router, checkIncognitoStatus]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,10 +117,22 @@ export default function TeamLoginPage() {
     setError(null);
   };
 
-  if (checkingExisting) {
+  // If Incognito is strictly required and user is in normal browser window, block access
+  if (requireIncognito && isIncognito === false) {
     return (
-      <div className="min-h-screen bg-[#030305] flex items-center justify-center font-mono text-xs text-amber-400">
-        INITIALIZING TERMINAL GATEWAY...
+      <IncognitoBarrier
+        browserName={browserName}
+        onRecheck={checkIncognitoStatus}
+        isChecking={checkingIncognito}
+      />
+    );
+  }
+
+  if (checkingExisting || (requireIncognito && isIncognito === null)) {
+    return (
+      <div className="min-h-screen bg-[#030305] flex flex-col items-center justify-center font-mono text-xs text-amber-400 gap-3">
+        <div className="w-6 h-6 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
+        <span className="tracking-wider">INITIALIZING TERMINAL & VERIFYING SECURITY GATEWAY...</span>
       </div>
     );
   }
@@ -101,7 +149,15 @@ export default function TeamLoginPage() {
           <span className="text-neutral-600">//</span>
           <span className="text-amber-400">AUTHENTICATION GATEWAY</span>
         </div>
-        <span className="text-[10px] text-neutral-400">PORT: 3000 // SECURE</span>
+        <div className="flex items-center gap-2">
+          {requireIncognito && (
+            <span className="px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/40 text-emerald-400 text-[10px] font-mono font-bold flex items-center gap-1">
+              <Shield className="w-3 h-3" />
+              INCOGNITO VERIFIED
+            </span>
+          )}
+          <span className="text-[10px] text-neutral-400">PORT: 3000 // SECURE</span>
+        </div>
       </header>
 
       <main className="max-w-md mx-auto w-full my-auto space-y-6">
