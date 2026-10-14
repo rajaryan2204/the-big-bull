@@ -4,61 +4,75 @@ interface BullLogoProps {
   size?: "sm" | "md" | "lg" | "xl";
   showText?: boolean;
   className?: string;
+  variant?: "blue" | "white";
 }
 
 export const BullLogo: React.FC<BullLogoProps> = ({
   size = "md",
   showText = true,
   className = "",
+  variant = "blue",
 }) => {
   const iconSizes = {
-    sm: "w-6 h-6",
-    md: "w-9 h-9",
-    lg: "w-14 h-14",
-    xl: "w-20 h-20",
+    sm: "w-7 h-7 rounded-lg",
+    md: "w-9 h-9 rounded-xl",
+    lg: "w-12 h-12 rounded-2xl",
+    xl: "w-16 h-16 rounded-2xl",
   };
 
   const textSizes = {
-    sm: "text-base font-bold tracking-wider",
-    md: "text-xl font-extrabold tracking-wider",
-    lg: "text-3xl font-black tracking-widest",
-    xl: "text-5xl font-black tracking-widest",
+    sm: "text-sm font-bold tracking-tight",
+    md: "text-lg font-black tracking-tight",
+    lg: "text-2xl font-black tracking-tight",
+    xl: "text-4xl font-black tracking-tight",
   };
 
+  const isWhite = variant === "white";
+
   return (
-    <div className={`flex items-center gap-3 ${className}`}>
+    <div className={`flex items-center gap-2.5 ${className}`}>
       {/* Bull Head Icon Badge */}
       <div
-        className={`${iconSizes[size]} relative flex items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 via-amber-600 to-amber-800 p-0.5 shadow-lg shadow-amber-500/20`}
+        className={`${iconSizes[size]} relative flex items-center justify-center shrink-0 shadow-sm transition-transform active:scale-95 ${
+          isWhite
+            ? "bg-white text-blue-600 shadow-blue-900/10"
+            : "bg-blue-600 text-white shadow-blue-500/20"
+        }`}
       >
-        <div className="w-full h-full bg-[#0d0d12] rounded-[10px] flex items-center justify-center">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="w-3/4 h-3/4 text-amber-400"
-          >
-            {/* Bull horns & fierce head silhouette */}
-            <path d="M3 5c2 0 4 3 4 6" />
-            <path d="M21 5c-2 0-4 3-4 6" />
-            <path d="M7 11c0 5 2.5 8 5 8s5-3 5-8" />
-            <path d="M9 14h.01" />
-            <path d="M15 14h.01" />
-            <path d="M10 18l2 2 2-2" />
-          </svg>
-        </div>
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="w-3/5 h-3/5"
+        >
+          {/* Minimalist Bull Horns & Head */}
+          <path d="M3 5c2 0 4 3 4 6" />
+          <path d="M21 5c-2 0-4 3-4 6" />
+          <path d="M7 11c0 5 2.5 8 5 8s5-3 5-8" />
+          <path d="M9 14h.01" />
+          <path d="M15 14h.01" />
+          <path d="M10 18l2 2 2-2" />
+        </svg>
       </div>
 
       {showText && (
-        <div className="flex flex-col">
-          <span className={`gold-gradient-text uppercase font-sans ${textSizes[size]}`}>
+        <div className="flex flex-col text-left">
+          <span
+            className={`font-sans tracking-tight uppercase leading-none ${textSizes[size]} ${
+              isWhite ? "text-white" : "text-slate-900"
+            }`}
+          >
             THE BIG BULL
           </span>
-          <span className="text-[10px] uppercase tracking-widest text-amber-500/80 font-semibold -mt-1 hidden sm:block">
-            Think Smart • Play Strategic
+          <span
+            className={`text-[10px] font-medium tracking-wide mt-0.5 leading-none hidden sm:block ${
+              isWhite ? "text-blue-100" : "text-blue-600 font-semibold"
+            }`}
+          >
+            Championship Arena
           </span>
         </div>
       )}

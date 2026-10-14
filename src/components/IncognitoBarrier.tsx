@@ -5,12 +5,10 @@ import {
   Copy,
   Check,
   RefreshCw,
-  ExternalLink,
   Laptop,
   Smartphone,
-  Flame,
-  AlertTriangle,
   Lock,
+  ShieldCheck,
 } from "lucide-react";
 import { soundFx } from "@/src/lib/soundFx";
 
@@ -38,154 +36,118 @@ export function IncognitoBarrier({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-[#030305] text-white flex flex-col justify-between p-4 sm:p-6 overflow-y-auto font-sans select-none"
+      className="fixed inset-0 z-50 bg-slate-50 text-slate-900 flex flex-col justify-between p-4 sm:p-6 overflow-y-auto select-none font-sans"
       onContextMenu={(e) => e.preventDefault()}
     >
       {/* Top Header */}
-      <header className="flex items-center justify-between border-b border-[#1f1f2e] pb-3 font-mono text-xs text-neutral-400">
+      <header className="flex items-center justify-between border-b border-slate-200/80 pb-3 max-w-2xl mx-auto w-full">
         <div className="flex items-center gap-2">
-          <div className="w-2.5 h-2.5 bg-red-500 rounded-sm animate-pulse" />
-          <span className="font-bold text-white tracking-widest uppercase">THE BIG BULL</span>
-          <span className="text-neutral-600">//</span>
-          <span className="text-red-400 font-bold">INVIGILATION SECURITY GATE</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="px-2 py-0.5 rounded bg-red-950/60 border border-red-500/50 text-red-300 font-bold text-[10px] tracking-wider uppercase">
-            BARRIER ACTIVE
+          <div className="w-2.5 h-2.5 bg-blue-600 rounded-sm" />
+          <span className="font-bold text-slate-900 tracking-tight text-xs uppercase">
+            THE BIG BULL
           </span>
-          <span className="text-[10px] text-neutral-400 hidden sm:inline">
-            DETECTED: {browserName.toUpperCase()}
-          </span>
+          <span className="text-slate-300">//</span>
+          <span className="text-blue-600 font-semibold text-xs">Security Invigilation</span>
         </div>
+        <span className="px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[10px] font-medium">
+          Detected: {browserName}
+        </span>
       </header>
 
-      {/* Main Center Warning & Instructions */}
-      <main className="max-w-xl mx-auto w-full my-auto py-6 space-y-6">
-        {/* Urgent Warning Shield Card */}
-        <div className="p-6 rounded-2xl bg-gradient-to-b from-[#140a0c] to-[#0a0709] border-2 border-red-500/60 shadow-2xl shadow-red-950/40 text-center space-y-3">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-red-500/10 border border-red-500/40 flex items-center justify-center text-red-400 shadow-inner">
-            <ShieldAlert className="w-9 h-9 animate-bounce" />
+      {/* Main Center Card */}
+      <main className="max-w-md sm:max-w-lg mx-auto w-full my-auto py-4 sm:py-6 space-y-4 sm:space-y-6">
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-md p-5 sm:p-7 text-center space-y-4">
+          {/* Badge Icon */}
+          <div className="w-14 h-14 sm:w-16 sm:h-16 mx-auto rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shadow-xs">
+            <Lock className="w-7 h-7 sm:w-8 sm:h-8" />
           </div>
 
-          <div>
-            <div className="text-[10px] font-mono uppercase tracking-widest text-red-400 font-extrabold flex items-center justify-center gap-1.5">
-              <Lock className="w-3.5 h-3.5" />
-              INCOGNITO / PRIVATE WINDOW REQUIRED
-            </div>
-            <h1 className="text-xl sm:text-2xl font-black text-white font-mono uppercase tracking-tight mt-1">
-              NORMAL BROWSING IS RESTRICTED
-            </h1>
-          </div>
-
-          <p className="text-xs sm:text-sm text-neutral-300 leading-relaxed font-sans max-w-lg mx-auto">
-            To ensure absolute integrity and block all third-party AI extensions, autofill plugins, and unauthorized caching,
-            <span className="text-amber-400 font-bold"> THE BIG BULL Arena strictly enforces Private / Incognito browsing.</span>
-          </p>
-        </div>
-
-        {/* Quick Instructions per Platform */}
-        <div className="space-y-3 bg-[#08080d] border border-[#1b1b28] p-5 rounded-xl">
-          <div className="flex items-center justify-between text-xs font-mono font-bold text-neutral-300">
-            <span className="uppercase text-amber-400 flex items-center gap-1.5">
-              <Flame className="w-3.5 h-3.5" />
-              HOW TO OPEN IN PRIVATE MODE
+          <div className="space-y-1">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100 inline-block">
+              Private Browsing Required
             </span>
-            <span className="text-[11px] text-neutral-400 font-normal">Step-by-step</span>
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-2">
+              Open in Incognito Mode
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-600 max-w-sm mx-auto leading-relaxed pt-1">
+              To keep the competition 100% fair and block third-party extensions, AI solvers, and auto-fill, this terminal must be opened in an Incognito / Private window.
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-            {/* Chrome / Edge / Brave */}
-            <div className="p-3.5 rounded-lg bg-[#0e0e16] border border-[#222232] space-y-1.5">
-              <div className="font-bold text-white flex items-center gap-1.5 font-mono">
-                <Laptop className="w-3.5 h-3.5 text-amber-400" />
-                <span>Chrome / Edge / Brave</span>
-              </div>
-              <p className="text-[11px] text-neutral-400">
-                Press <kbd className="px-1.5 py-0.5 rounded bg-[#1c1c28] text-amber-300 font-mono font-bold border border-[#333348]">Ctrl+Shift+N</kbd> (Windows)
-                or <kbd className="px-1.5 py-0.5 rounded bg-[#1c1c28] text-amber-300 font-mono font-bold border border-[#333348]">Cmd+Shift+N</kbd> (Mac).
-              </p>
+          {/* Shortcut Cards */}
+          <div className="text-left space-y-2 pt-2">
+            <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+              Quick Shortcuts:
             </div>
-
-            {/* Safari & Apple */}
-            <div className="p-3.5 rounded-lg bg-[#0e0e16] border border-[#222232] space-y-1.5">
-              <div className="font-bold text-white flex items-center gap-1.5 font-mono">
-                <Laptop className="w-3.5 h-3.5 text-sky-400" />
-                <span>Apple Safari</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
+                <div className="font-semibold text-slate-900 flex items-center gap-1.5">
+                  <Laptop className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                  <span>Chrome / Edge / Brave</span>
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  <kbd className="px-1.5 py-0.5 rounded bg-white border border-slate-200 font-mono text-slate-800 font-semibold shadow-2xs">Ctrl+Shift+N</kbd> or <kbd className="px-1.5 py-0.5 rounded bg-white border border-slate-200 font-mono text-slate-800 font-semibold shadow-2xs">Cmd+Shift+N</kbd>
+                </p>
               </div>
-              <p className="text-[11px] text-neutral-400">
-                Press <kbd className="px-1.5 py-0.5 rounded bg-[#1c1c28] text-sky-300 font-mono font-bold border border-[#333348]">Cmd+Shift+N</kbd>, or tap
-                Tabs icon <span className="font-bold text-white">❐</span> → <span className="text-sky-300 font-bold">&quot;Private&quot;</span>.
-              </p>
-            </div>
 
-            {/* Firefox */}
-            <div className="p-3.5 rounded-lg bg-[#0e0e16] border border-[#222232] space-y-1.5">
-              <div className="font-bold text-white flex items-center gap-1.5 font-mono">
-                <Laptop className="w-3.5 h-3.5 text-orange-400" />
-                <span>Mozilla Firefox</span>
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1">
+                <div className="font-semibold text-slate-900 flex items-center gap-1.5">
+                  <Smartphone className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                  <span>Apple Safari (iPhone / Mac)</span>
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  Tap Tabs icon <span className="font-bold text-slate-800">❐</span> → Select <span className="text-blue-600 font-semibold">&quot;Private&quot;</span>
+                </p>
               </div>
-              <p className="text-[11px] text-neutral-400">
-                Press <kbd className="px-1.5 py-0.5 rounded bg-[#1c1c28] text-orange-300 font-mono font-bold border border-[#333348]">Ctrl+Shift+P</kbd> or
-                Menu ☰ → <span className="text-orange-300 font-bold">&quot;New Private Window&quot;</span>.
-              </p>
-            </div>
 
-            {/* Mobile Devices */}
-            <div className="p-3.5 rounded-lg bg-[#0e0e16] border border-[#222232] space-y-1.5">
-              <div className="font-bold text-white flex items-center gap-1.5 font-mono">
-                <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Mobile Phones</span>
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1 sm:col-span-2">
+                <div className="font-semibold text-slate-900 flex items-center gap-1.5">
+                  <Smartphone className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                  <span>Android & Mobile Browsers</span>
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  Tap Menu (3 dots ︙) → Select <span className="text-blue-600 font-semibold">&quot;New Incognito tab&quot;</span>
+                </p>
               </div>
-              <p className="text-[11px] text-neutral-400">
-                Tap Menu (Three Dots ︙ or Tabs ❐) → <span className="text-emerald-300 font-bold">&quot;New Incognito / Private Tab&quot;</span>.
-              </p>
             </div>
           </div>
-        </div>
 
-        {/* Action Controls */}
-        <div className="space-y-3">
-          <div className="flex flex-col sm:flex-row gap-2.5">
-            {/* Copy Link Button */}
+          {/* Action Buttons */}
+          <div className="flex flex-col sm:flex-row gap-2.5 pt-3">
             <button
               onClick={handleCopyLink}
-              className="flex-1 py-3 px-4 rounded-xl bg-[#14141f] border border-[#272738] hover:border-amber-500/50 text-white font-mono text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer"
+              className="flex-1 py-3.5 px-4 rounded-xl bg-white border border-slate-300 hover:bg-slate-50 text-slate-800 font-semibold text-xs flex items-center justify-center gap-2 shadow-xs transition active:scale-[0.99] cursor-pointer min-h-[48px]"
             >
               {copied ? (
                 <>
-                  <Check className="w-4 h-4 text-emerald-400" />
-                  <span className="text-emerald-400">COPIED LINK TO CLIPBOARD!</span>
+                  <Check className="w-4 h-4 text-emerald-600" />
+                  <span className="text-emerald-700 font-bold">Link Copied!</span>
                 </>
               ) : (
                 <>
-                  <Copy className="w-4 h-4 text-amber-400" />
-                  <span>COPY TERMINAL URL</span>
+                  <Copy className="w-4 h-4 text-slate-600" />
+                  <span>Copy Competition Link</span>
                 </>
               )}
             </button>
 
-            {/* Re-Check Button */}
             {onRecheck && (
               <button
                 onClick={onRecheck}
                 disabled={isChecking}
-                className="py-3 px-5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-mono font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition cursor-pointer disabled:opacity-50"
+                className="py-3.5 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm shadow-blue-500/20 transition active:scale-[0.99] cursor-pointer disabled:opacity-60 min-h-[48px]"
               >
                 <RefreshCw className={`w-4 h-4 ${isChecking ? "animate-spin" : ""}`} />
-                <span>{isChecking ? "SCANNING BROWSER..." : "RE-VERIFY WINDOW"}</span>
+                <span>{isChecking ? "Checking..." : "Re-Check Status"}</span>
               </button>
             )}
-          </div>
-
-          <div className="text-center font-mono text-[11px] text-neutral-400">
-            Open the link above in your Incognito window to enter the competition.
           </div>
         </div>
       </main>
 
-      {/* Bottom Footer Note */}
-      <footer className="border-t border-[#1a1a26] pt-3 text-center font-mono text-[10px] text-neutral-400">
-        ADMIN PARDON NOTICE: If your device uses enterprise restrictions or guest profiles, contact the Arena Admin to pardon your station.
+      {/* Footer */}
+      <footer className="text-center text-[11px] text-slate-600 max-w-md mx-auto w-full pt-3">
+        Device restriction note: If your school/company device blocks incognito, ask the Admin to pardon your station.
       </footer>
     </div>
   );

@@ -10,7 +10,6 @@ import {
   AlertTriangle,
   Lightbulb,
   Eye,
-  Percent,
   FastForward,
   LogOut,
   Maximize2,
@@ -19,7 +18,6 @@ import {
   Shield,
   XCircle,
   Radio,
-  Sparkles,
   Trophy,
 } from "lucide-react";
 import {
@@ -176,259 +174,101 @@ export default function TeamTerminalPage() {
     });
   };
 
-  // 3. Trigger Security Strike Incident (Debounced to avoid rapid multi-firing)
+  // 3. Trigger Security Strike Incident (Debounced)
   const triggerSecurityStrike = useCallback(
     (reason: string) => {
       if (isDisqualified) return;
       const now = Date.now();
-      // Debounce at least 2 seconds
       if (now - lastIncidentTimeRef.current < 2000) return;
       lastIncidentTimeRef.current = now;
 
-      setLockdownActive(true);
-      setLockdownReason(reason);
       soundFx.playStrikeAlarm();
       if (typeof navigator !== "undefined" && navigator.vibrate) {
-        navigator.vibrate([200, 100, 200]);
+        navigator.vibrate([300, 100, 300]);
       }
 
+      setLockdownReason(reason);
+      setLockdownActive(true);
+
       if (socketRef.current && socketRef.current.connected) {
-        socketRef.current.emit("team:record_strike", { reason }, (res: any) => {
-          if (res) {
-            setStrikes(res.strikesCount);
-            if (res.isDisqualified) {
-              setIsDisqualified(true);
-            }
-          }
-        });
-      } else {
-        fetch("/api/team/action", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "record_strike", reason }),
-        })
-          .then((res) => res.json())
-          .then((res) => {
-            if (res && res.strikesCount !== undefined) {
-              setStrikes(res.strikesCount);
-              if (res.isDisqualified) setIsDisqualified(true);
-            }
-          })
-          .catch(() => {});
+        socketRef.current.emit("team:security_incident", { reason });
       }
+
+      fetch("/api/team/action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "team:security_incident", payload: { reason } }),
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.strikeUpdate) {
+            setStrikes(data.strikeUpdate.strikesCount);
+            setIsDisqualified(data.strikeUpdate.isDisqualified);
+          }
+        })
+        .catch(() => {});
     },
     [isDisqualified]
   );
 
-  // 4. Strict Fullscreen & Kiosk Listeners
+  // 4. Kiosk Mode Event Listeners
   useEffect(() => {
-    if (!hasEnteredTerminal) return;
-
-    const handleFullscreenChange = () => {
-      const isNowFullscreen = !!(
-        document.fullscreenElement ||
-        (document as any).webkitFullscreenElement ||
-        (document as any).mozFullScreenElement
-      );
-
-      setIsFullscreen(isNowFullscreen);
-
-      if (!isNowFullscreen && !isDisqualified) {
-        triggerSecurityStrike("Exited Fullscreen Kiosk Mode");
-      } else if (isNowFullscreen && !isDisqualified && strikes < 3) {
-        // Returned to fullscreen safely
-        setLockdownActive(false);
-      }
-    };
+    if (!hasEnteredTerminal || isDisqualified) return;
 
     const handleVisibilityChange = () => {
-      if (document.hidden && !isDisqualified) {
-        triggerSecurityStrike("Minimized Window / Tab Switched");
+      if (document.hidden) {
+        triggerSecurityStrike("Tab Minimized or Switched Away");
       }
     };
 
-    const handleBlur = () => {
-      if (isDisqualified) return;
-      if (document.hidden) {
-        triggerSecurityStrike("Minimized Window / Tab Switched");
-        return;
+    const handleWindowBlur = () => {
+      triggerSecurityStrike("Lost Browser Window Focus");
+    };
+
+    const handleFullscreenChange = () => {
+      const active = !!(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement
+      );
+      setIsFullscreen(active);
+      if (!active && hasEnteredTerminal && !isDisqualified) {
+        triggerSecurityStrike("Exited Mandatory Fullscreen");
       }
-      setTimeout(() => {
-        if (!document.hasFocus() && !isDisqualified) {
-          triggerSecurityStrike("Window Focus Lost / Desktop Minimized");
-        }
-      }, 400);
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Block F12 (DevTools)
-      if (e.key === "F12") {
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        ["c", "v", "x", "a", "s", "p", "u", "r", "t", "w", "n"].includes(e.key.toLowerCase())
+      ) {
         e.preventDefault();
         return false;
       }
-      // Block Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+Shift+C (DevTools)
-      if (e.ctrlKey && e.shiftKey && ["I", "J", "C", "i", "j", "c"].includes(e.key)) {
-        e.preventDefault();
-        return false;
-      }
-      // Block Ctrl+U / Cmd+U (View Source)
-      if ((e.ctrlKey || e.metaKey) && ["u", "U"].includes(e.key)) {
-        e.preventDefault();
-        return false;
-      }
-      // Block Ctrl+R / F5 (Page Refresh)
-      if (e.key === "F5" || ((e.ctrlKey || e.metaKey) && ["r", "R"].includes(e.key))) {
-        e.preventDefault();
-        return false;
-      }
-      // Block Ctrl+C / Ctrl+V / Ctrl+X
-      if ((e.ctrlKey || e.metaKey) && ["c", "v", "x", "C", "V", "X"].includes(e.key)) {
+      if (["F12", "F5", "F11", "Escape"].includes(e.key)) {
         e.preventDefault();
         return false;
       }
     };
 
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = "Exam in progress. Leaving will count as a security violation.";
-      return e.returnValue;
-    };
-
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("blur", handleWindowBlur);
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    window.addEventListener("blur", handleBlur);
     window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("beforeunload", handleBeforeUnload);
 
     return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("blur", handleWindowBlur);
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
       document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      window.removeEventListener("blur", handleBlur);
       window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("beforeunload", handleBeforeUnload);
     };
-  }, [hasEnteredTerminal, triggerSecurityStrike, isDisqualified, strikes]);
+  }, [hasEnteredTerminal, isDisqualified, triggerSecurityStrike]);
 
-  // Request Fullscreen Lock
-  const enterFullscreen = async () => {
-    try {
-      const el = document.documentElement;
-      if (el.requestFullscreen) {
-        await el.requestFullscreen();
-      } else if ((el as any).webkitRequestFullscreen) {
-        await (el as any).webkitRequestFullscreen();
-      }
-
-      // Modern Chromium Keyboard Lock API (locks Escape key to prevent accidental exit)
-      if ("keyboard" in navigator && (navigator as any).keyboard?.lock) {
-        try {
-          await (navigator as any).keyboard.lock(["Escape"]);
-        } catch (e) {
-          // Ignored if unsupported
-        }
-      }
-
-      setIsFullscreen(true);
-      setHasEnteredTerminal(true);
-      setLockdownActive(false);
-    } catch (err) {
-      console.warn("Fullscreen request bypassed:", err);
-      // Graceful mobile/iOS fallback: enter kiosk view anyway
-      setIsFullscreen(true);
-      setHasEnteredTerminal(true);
-      setLockdownActive(false);
-    }
-  };
-
-  const handleLogout = async () => {
-    if (document.fullscreenElement) {
-      document.exitFullscreen().catch(() => {});
-    }
-    await fetch("/api/auth/team/logout", { method: "POST" });
-    sessionStorage.removeItem("bigbull_team_token");
-    router.replace("/join");
-  };
-
-  // Submit Answer (Dual: Socket + HTTP Fallback for Vercel)
-  const submitAnswer = async (option: string) => {
-    if (isDisqualified) return;
-    setLockingIn(true);
-    soundFx.playLockSound();
-
-    let handled = false;
-    if (socketRef.current && socketRef.current.connected) {
-      socketRef.current.emit(
-        "team:submit_answer",
-        { selectedOption: option },
-        (res: { success: boolean; error?: string }) => {
-          setLockingIn(false);
-          setConfirmModal(null);
-          if (!res.success) {
-            alert(res.error || "Submission failed");
-          }
-        }
-      );
-      handled = true;
-    }
-
-    try {
-      const res = await fetch("/api/team/action", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "submit_answer", selectedOption: option }),
-      });
-      const data = await res.json();
-      setLockingIn(false);
-      setConfirmModal(null);
-      if (!res.ok && !handled) {
-        alert(data.error || "Submission failed");
-      } else if (data.success) {
-        setSelectedOption(option);
-      }
-    } catch (e) {
-      if (!handled) setLockingIn(false);
-    }
-  };
-
-  // Purchase Lifeline (Dual: Socket + HTTP Fallback)
-  const buyLifeline = async (type: LifelineType) => {
-    if (isDisqualified) return;
-    soundFx.playCoinDing();
-
-    let handled = false;
-    if (socketRef.current && socketRef.current.connected) {
-      socketRef.current.emit(
-        "team:buy_lifeline",
-        { lifelineType: type },
-        (res: { success: boolean; error?: string }) => {
-          setConfirmModal(null);
-          if (!res.success) {
-            alert(res.error || "Purchase failed");
-          }
-        }
-      );
-      handled = true;
-    }
-
-    try {
-      const res = await fetch("/api/team/action", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "buy_lifeline", lifelineType: type }),
-      });
-      const data = await res.json();
-      setConfirmModal(null);
-      if (!res.ok && !handled) {
-        alert(data.error || "Purchase failed");
-      }
-    } catch (e) {}
-  };
-
-  // HTTP Polling Fallback for Team Terminal
+  // HTTP Polling Fallback
   useEffect(() => {
-    if (!hasEnteredTerminal) return;
     const pollInterval = setInterval(async () => {
       if (!socketRef.current || !socketRef.current.connected) {
         try {
@@ -446,11 +286,129 @@ export default function TeamTerminalPage() {
               setIsPaused(true);
             }
           }
-        } catch (e) {}
+        } catch {}
       }
-    }, 1500);
+    }, 2000);
     return () => clearInterval(pollInterval);
-  }, [hasEnteredTerminal]);
+  }, []);
+
+  // Enter Fullscreen Lock
+  const enterFullscreen = async () => {
+    try {
+      const docEl = document.documentElement as any;
+      if (docEl.requestFullscreen) {
+        await docEl.requestFullscreen();
+      } else if (docEl.webkitRequestFullscreen) {
+        await docEl.webkitRequestFullscreen();
+      } else if (docEl.mozRequestFullScreen) {
+        await docEl.mozRequestFullScreen();
+      } else if (docEl.msRequestFullscreen) {
+        await docEl.msRequestFullscreen();
+      }
+      setIsFullscreen(true);
+      setHasEnteredTerminal(true);
+      setLockdownActive(false);
+    } catch {
+      // In iOS or unsupported webviews, allow entering terminal
+      setHasEnteredTerminal(true);
+      setLockdownActive(false);
+    }
+  };
+
+  // Submit Answer
+  const submitAnswer = async (option: string) => {
+    if (!gameState?.currentQuestion || lockingIn) return;
+    setLockingIn(true);
+    setConfirmModal(null);
+    soundFx.playLockSound();
+
+    let socketSuccess = false;
+    if (socketRef.current && socketRef.current.connected) {
+      socketRef.current.emit(
+        "team:submit_answer",
+        { selectedOption: option, timeTakenSeconds: 300 - remainingSeconds },
+        (res: any) => {
+          if (res?.success) socketSuccess = true;
+        }
+      );
+    }
+
+    try {
+      const res = await fetch("/api/team/action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "submit_answer",
+          payload: {
+            gameQuestionId: gameState.currentQuestion.id,
+            selectedOption: option,
+            timeTakenSeconds: 300 - remainingSeconds,
+          },
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok && !socketSuccess) {
+        alert(data.error || "Submission failed.");
+      } else if (data.answer) {
+        setSelectedOption(data.answer.selectedOption);
+        if (privateState) {
+          setPrivateState({ ...privateState, currentAnswer: data.answer });
+        }
+      }
+    } catch {
+      if (!socketSuccess) console.error("HTTP fallback submit error");
+    } finally {
+      setLockingIn(false);
+    }
+  };
+
+  // Buy Lifeline
+  const buyLifeline = async (type: LifelineType) => {
+    if (!gameState?.currentQuestion) return;
+    setConfirmModal(null);
+
+    let socketSuccess = false;
+    if (socketRef.current && socketRef.current.connected) {
+      socketRef.current.emit("team:buy_lifeline", { lifelineType: type }, (res: any) => {
+        if (res?.success) {
+          socketSuccess = true;
+          soundFx.playCoinDing();
+        }
+      });
+    }
+
+    try {
+      const res = await fetch("/api/team/action", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "buy_lifeline",
+          payload: { gameQuestionId: gameState.currentQuestion.id, lifelineType: type },
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok && !socketSuccess) {
+        alert(data.error || "Lifeline purchase failed.");
+      } else if (data.lifeline) {
+        soundFx.playCoinDing();
+        if (team && data.newBalance !== undefined) {
+          setTeam({ ...team, currentBalance: data.newBalance });
+        }
+      }
+    } catch {
+      if (!socketSuccess) console.error("HTTP fallback lifeline error");
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/team/logout", { method: "POST" });
+      sessionStorage.removeItem("bigbull_team_token");
+      router.replace("/join");
+    } catch {
+      router.replace("/join");
+    }
+  };
 
   const currentQ = gameState?.currentQuestion;
   const gameStatus = gameState?.status || "LOBBY";
@@ -462,7 +420,6 @@ export default function TeamTerminalPage() {
   const hintText = lifelines?.["BULLS_HINT"]?.details?.hintText;
   const visualClueUrl = lifelines?.["VISION_BOOST"]?.details?.visualClueUrl;
 
-  // Format Timer MM:SS
   const mins = Math.floor(Math.max(0, remainingSeconds) / 60);
   const secs = Math.max(0, remainingSeconds) % 60;
   const timerDisplay = `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
@@ -487,69 +444,69 @@ export default function TeamTerminalPage() {
   if (!hasEnteredTerminal) {
     return (
       <div
-        className="min-h-screen bg-[#040407] text-white flex flex-col justify-between p-6 select-none font-sans"
+        className="min-h-[100dvh] bg-slate-50 text-slate-900 flex flex-col justify-between p-4 sm:p-6 select-none font-sans"
         onContextMenu={(e) => e.preventDefault()}
       >
-        <div className="flex items-center justify-between border-b border-[#1c1c28] pb-4">
+        <div className="flex items-center justify-between border-b border-slate-200 pb-3 max-w-md mx-auto w-full">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-amber-500 rounded-sm" />
-            <span className="font-mono text-xs uppercase tracking-widest text-amber-400 font-bold">
-              THE BIG BULL // ARENA PROTOCOL
+            <div className="w-2.5 h-2.5 bg-blue-600 rounded-sm" />
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-900">
+              THE BIG BULL
             </span>
           </div>
           <div className="flex items-center gap-2">
             {requireIncognito && isIncognito && (
-              <span className="px-2 py-0.5 rounded bg-emerald-950/60 border border-emerald-500/40 text-emerald-400 font-mono text-[10px] font-bold flex items-center gap-1">
-                <Shield className="w-3 h-3" />
-                INCOGNITO VERIFIED
+              <span className="px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[10px] font-bold flex items-center gap-1">
+                <Shield className="w-3 h-3 text-blue-600" />
+                Incognito Verified
               </span>
             )}
-            <span className="font-mono text-[11px] text-neutral-400">
-              TERMINAL: {team?.teamCode}
+            <span className="font-mono text-xs font-semibold text-slate-600">
+              {team?.teamCode}
             </span>
           </div>
         </div>
 
-        <main className="max-w-lg mx-auto w-full text-center space-y-6 my-auto">
-          <div className="w-16 h-16 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto">
-            <ShieldAlert className="w-8 h-8" />
+        <main className="max-w-md mx-auto w-full text-center space-y-5 my-auto py-6">
+          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center mx-auto shadow-xs">
+            <ShieldAlert className="w-7 h-7 sm:w-8 sm:h-8" />
           </div>
 
-          <div className="space-y-2">
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white uppercase font-mono">
-              ARENA KIOSK LOCKDOWN
+          <div className="space-y-1">
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 uppercase">
+              Exam Kiosk Lockdown
             </h1>
-            <p className="text-xs text-neutral-400 max-w-sm mx-auto leading-relaxed">
-              Active competition requires mandatory full-screen lockdown. Copying, right-clicking, and background tabs are strictly disabled.
+            <p className="text-xs sm:text-sm text-slate-500 max-w-sm mx-auto leading-relaxed">
+              Active competition requires full-screen lock. Copying, right-clicking, and background tabs are strictly monitored.
             </p>
           </div>
 
           {/* 3-Strike Warning Notice */}
-          <div className="p-4 rounded-xl bg-red-950/20 border border-red-500/30 text-left space-y-2 text-xs">
-            <div className="flex items-center gap-2 font-bold text-red-400 uppercase tracking-wider font-mono">
+          <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-left space-y-2 text-xs">
+            <div className="flex items-center gap-2 font-bold text-red-700 uppercase tracking-wider">
               <AlertTriangle className="w-4 h-4 shrink-0" />
-              <span>STRICT 3-STRIKE DISQUALIFICATION RULE</span>
+              <span>Strict 3-Strike Disqualification Rule</span>
             </div>
-            <ul className="list-disc list-inside text-neutral-300 text-[11px] space-y-1 leading-normal">
+            <ul className="list-disc list-inside text-slate-700 text-[11px] space-y-1">
               <li>Minimizing the app or exiting full screen triggers a Strike.</li>
               <li>Switching tabs or losing browser focus triggers a Strike.</li>
               <li>
-                <strong className="text-red-400">3rd Strike = AUTOMATIC DISQUALIFICATION.</strong> Your exam terminal will be permanently locked.
+                <strong className="text-red-700 font-bold">3rd Strike = Automatic Disqualification</strong>. Terminal will be permanently locked.
               </li>
             </ul>
           </div>
 
           <button
             onClick={enterFullscreen}
-            className="w-full py-4 rounded-xl bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 text-black font-mono font-black text-xs uppercase tracking-widest shadow-xl shadow-amber-500/20 hover:brightness-110 active:scale-[0.99] transition flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full py-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold text-sm tracking-wide shadow-sm shadow-blue-500/20 transition flex items-center justify-center gap-2 cursor-pointer min-h-[50px]"
           >
             <Maximize2 className="w-4 h-4" />
-            <span>INITIALIZE SECURE FULLSCREEN & ENTER</span>
+            <span>Enter Fullscreen Terminal</span>
           </button>
         </main>
 
-        <footer className="text-center font-mono text-[10px] text-neutral-400">
-          SECURE COMPETITION SYSTEM // HOST AUTHORIZED
+        <footer className="text-center text-[11px] text-slate-400 max-w-md mx-auto w-full pt-3">
+          Authorized Live Competition Terminal
         </footer>
       </div>
     );
@@ -560,149 +517,139 @@ export default function TeamTerminalPage() {
   // ==========================================
   return (
     <div
-      className="min-h-screen bg-[#040407] text-white flex flex-col justify-between select-none relative overflow-x-hidden font-sans"
+      className="min-h-[100dvh] bg-slate-50 text-slate-900 flex flex-col justify-between select-none relative overflow-x-hidden font-sans"
       onContextMenu={(e) => e.preventDefault()}
       onCopy={(e) => e.preventDefault()}
       onCut={(e) => e.preventDefault()}
       onPaste={(e) => e.preventDefault()}
     >
-      {/* ========================================================= */}
-      {/* LOCKDOWN OVERLAY (TRIGGERED WHEN FULLSCREEN EXITED / MINIMIZED) */}
-      {/* ========================================================= */}
+      {/* LOCKDOWN OVERLAY (SUSPENDED ON STRIKE) */}
       {lockdownActive && !isDisqualified && (
-        <div className="fixed inset-0 z-50 bg-[#060609]/95 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-200">
-          <div className="max-w-md w-full p-8 rounded-2xl bg-red-950/30 border-2 border-red-500 shadow-2xl shadow-red-500/20 space-y-5">
-            <div className="w-16 h-16 rounded-full bg-red-500/20 border border-red-500 text-red-400 flex items-center justify-center mx-auto animate-pulse">
-              <ShieldAlert className="w-8 h-8" />
+        <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-md flex flex-col items-center justify-center p-4 sm:p-6 text-center animate-in fade-in duration-200">
+          <div className="max-w-md w-full p-6 sm:p-8 rounded-2xl bg-white border border-red-300 shadow-xl space-y-4">
+            <div className="w-14 h-14 rounded-2xl bg-red-50 border border-red-200 text-red-600 flex items-center justify-center mx-auto">
+              <ShieldAlert className="w-7 h-7 animate-pulse" />
             </div>
 
             <div className="space-y-1">
-              <div className="font-mono text-xs uppercase tracking-widest text-red-400 font-bold">
-                SECURITY VIOLATION DETECTED
-              </div>
-              <h2 className="text-xl sm:text-2xl font-black text-white uppercase font-mono">
-                TERMINAL SUSPENDED
+              <span className="text-[11px] font-bold uppercase tracking-wider text-red-700 bg-red-50 px-2.5 py-0.5 rounded-full border border-red-200 inline-block">
+                Security Violation Detected
+              </span>
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900">
+                Terminal Suspended
               </h2>
-              <p className="text-xs text-neutral-300 font-mono mt-1">
+              <p className="text-xs text-slate-600 mt-1">
                 {lockdownReason || "Window Minimized or Fullscreen Exited"}
               </p>
             </div>
 
             {/* Strike Gauge */}
-            <div className="p-4 rounded-xl bg-black/60 border border-red-500/40 text-center">
-              <div className="text-[11px] font-mono uppercase text-neutral-400 font-bold mb-2">
-                STRIKE PENALTY GAUGE
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center">
+              <div className="text-[11px] font-semibold uppercase text-slate-500 mb-2">
+                Strike Gauge (Max 3)
               </div>
               <div className="flex items-center justify-center gap-3">
                 {[1, 2, 3].map((s) => (
                   <div
                     key={s}
-                    className={`w-10 h-10 rounded-lg flex items-center justify-center font-mono font-black text-sm border-2 transition-all ${
+                    className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm border transition-all ${
                       strikes >= s
-                        ? "bg-red-600 border-red-400 text-white shadow-lg shadow-red-600/50"
-                        : "bg-[#111116] border-[#222230] text-neutral-600"
+                        ? "bg-red-600 border-red-600 text-white shadow-sm"
+                        : "bg-white border-slate-300 text-slate-400"
                     }`}
                   >
                     #{s}
                   </div>
                 ))}
               </div>
-              <div className="mt-2 text-xs font-mono font-bold text-red-400">
-                {strikes === 1 && "STRIKE 1 OF 3 ISSUED: 2 REMAINING"}
-                {strikes === 2 && "STRIKE 2 OF 3: FINAL WARNING BEFORE DISQUALIFICATION"}
-                {strikes >= 3 && "STRIKE 3 OF 3: MAXIMUM VIOLATION REACHED"}
+              <div className="mt-2 text-xs font-bold text-red-600">
+                {strikes === 1 && "Strike 1 of 3 issued. 2 remaining."}
+                {strikes === 2 && "Strike 2 of 3: FINAL WARNING before disqualification!"}
+                {strikes >= 3 && "Maximum violations reached."}
               </div>
             </div>
 
             <button
               onClick={enterFullscreen}
-              className="w-full py-3.5 rounded-xl bg-red-600 hover:bg-red-500 text-white font-mono font-black text-xs uppercase tracking-widest shadow-lg shadow-red-600/30 transition flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold text-xs uppercase tracking-wider shadow-sm transition flex items-center justify-center gap-2 cursor-pointer min-h-[48px]"
             >
               <Maximize2 className="w-4 h-4" />
-              <span>RE-ENTER FULLSCREEN LOCKDOWN</span>
+              <span>Re-Enter Fullscreen Terminal</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* DISQUALIFICATION SCREEN */}
+      {isDisqualified && (
+        <div className="fixed inset-0 z-50 bg-slate-900/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center space-y-5">
+          <div className="w-16 h-16 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center shadow-lg">
+            <XCircle className="w-10 h-10" />
+          </div>
+
+          <div className="space-y-1.5 max-w-md bg-white p-6 rounded-2xl shadow-xl">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-red-700 bg-red-50 px-2.5 py-0.5 rounded-full border border-red-200">
+              Disqualified • Exam Terminated
+            </span>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight pt-2">
+              Terminal Locked
+            </h1>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Team <strong className="text-slate-900">{team?.teamCode}</strong> exceeded the maximum limit of 3 security strikes.
+            </p>
+
+            <button
+              onClick={handleLogout}
+              className="w-full mt-4 py-3 rounded-xl border border-slate-300 bg-slate-50 text-slate-700 font-semibold text-xs hover:bg-slate-100"
+            >
+              Exit Terminal
             </button>
           </div>
         </div>
       )}
 
       {/* ========================================================= */}
-      {/* PERMANENT DISQUALIFICATION SCREEN (3 STRIKES EXCEEDED) */}
+      {/* TOP COMBAT HUD BAR - CLEAN WHITE & BLUE */}
       {/* ========================================================= */}
-      {isDisqualified && (
-        <div className="fixed inset-0 z-50 bg-[#060609] flex flex-col items-center justify-center p-6 text-center space-y-6">
-          <div className="w-20 h-20 rounded-2xl bg-red-600/20 border-2 border-red-500 text-red-500 flex items-center justify-center animate-bounce">
-            <XCircle className="w-12 h-12" />
+      <header className="border-b border-slate-200 bg-white/95 backdrop-blur-md px-3 sm:px-4 py-2.5 flex items-center justify-between sticky top-0 z-30 shadow-2xs">
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          <div className="flex items-center gap-1.5 text-xs sm:text-sm">
+            <div className="w-2.5 h-2.5 bg-blue-600 rounded-sm" />
+            <span className="font-bold text-slate-900 truncate max-w-[120px] sm:max-w-none">{team?.name}</span>
+            <span className="text-slate-400 font-mono text-[11px]">[{team?.teamCode}]</span>
           </div>
 
-          <div className="space-y-2 max-w-md">
-            <span className="font-mono text-xs uppercase tracking-widest text-red-500 font-bold bg-red-950/60 px-3 py-1 rounded-full border border-red-500/40">
-              DISQUALIFIED • EXAM TERMINATED
-            </span>
-            <h1 className="text-3xl sm:text-4xl font-black text-white uppercase font-mono tracking-tight">
-              TERMINAL PERMANENTLY LOCKED
-            </h1>
-            <p className="text-xs text-neutral-400 leading-relaxed font-mono">
-              Team <strong className="text-white">{team?.teamCode}</strong> has exceeded the maximum limit of 3 security strikes (window minimizing / tab switching).
-            </p>
-          </div>
-
-          <div className="p-4 rounded-xl bg-[#101016] border border-[#232332] text-xs font-mono text-neutral-400 max-w-sm w-full">
-            <div>Incident: 3 / 3 Anti-Cheat Strikes Triggered</div>
-            <div className="mt-1 text-red-400 font-bold">Status: Marked Disqualified in Live Ledger</div>
-          </div>
-
-          <button
-            onClick={handleLogout}
-            className="px-6 py-2.5 rounded-xl border border-neutral-700 bg-neutral-900 text-xs font-mono text-neutral-300 hover:text-white"
-          >
-            Exit Terminal Session
-          </button>
-        </div>
-      )}
-
-      {/* ========================================================= */}
-      {/* TOP COMBAT HUD BAR */}
-      {/* ========================================================= */}
-      <header className="border-b border-[#1c1c28] bg-[#08080d] px-4 py-2.5 flex items-center justify-between sticky top-0 z-40">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 font-mono text-xs">
-            <div className="w-2.5 h-2.5 bg-amber-500 rounded-sm" />
-            <span className="font-bold text-white tracking-wider">{team?.name}</span>
-            <span className="text-neutral-400">[{team?.teamCode}]</span>
-          </div>
-
-          {/* Connection Pulse */}
           <span
-            className={`w-2 h-2 rounded-full ${connected ? "bg-emerald-400 animate-pulse" : "bg-red-500"}`}
+            className={`w-2 h-2 rounded-full ${connected ? "bg-emerald-500" : "bg-red-500 animate-pulse"}`}
             title={connected ? "Connected" : "Reconnecting"}
           />
         </div>
 
-        {/* Tactical Coin Stash & Strike Gauge */}
-        <div className="flex items-center gap-3">
+        {/* Tactical Coin Stash & Strikes Gauge */}
+        <div className="flex items-center gap-2 sm:gap-2.5">
           {/* Strikes Counter Indicator */}
           <div
-            className={`flex items-center gap-1 px-2 py-1 rounded border font-mono text-[10px] font-bold ${
+            className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-[11px] font-bold ${
               strikes === 0
-                ? "bg-[#111116] border-[#222230] text-neutral-400"
+                ? "bg-slate-50 border-slate-200 text-slate-500"
                 : strikes === 1
-                ? "bg-amber-500/20 border-amber-500 text-amber-300"
-                : "bg-red-600/20 border-red-500 text-red-300 animate-pulse"
+                ? "bg-amber-50 border-amber-300 text-amber-700"
+                : "bg-red-50 border-red-300 text-red-700 animate-pulse"
             }`}
           >
-            <ShieldAlert className="w-3 h-3" />
-            <span>STRIKES: {strikes}/3</span>
+            <ShieldAlert className="w-3.5 h-3.5" />
+            <span>Strikes: {strikes}/3</span>
           </div>
 
           {/* Coin Badge */}
-          <div className="flex items-center gap-1.5 px-3 py-1 rounded bg-[#12121a] border border-amber-500/40 text-amber-300 font-mono font-bold text-xs">
-            <Coins className="w-3.5 h-3.5 text-amber-400" />
+          <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 border border-blue-200 text-blue-900 font-bold text-xs">
+            <Coins className="w-3.5 h-3.5 text-blue-600" />
             <span>{(team?.currentBalance ?? 5000).toLocaleString()}</span>
           </div>
 
           <button
             onClick={handleLogout}
-            className="p-1 rounded border border-[#272738] bg-[#14141c] text-neutral-400 hover:text-red-400"
+            className="p-1.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-400 hover:text-red-600 hover:bg-red-50 transition cursor-pointer"
             title="Log Out"
           >
             <LogOut className="w-3.5 h-3.5" />
@@ -713,22 +660,22 @@ export default function TeamTerminalPage() {
       {/* ========================================================= */}
       {/* MAIN GAME WORKSPACE */}
       {/* ========================================================= */}
-      <main className="flex-1 max-w-lg mx-auto w-full p-4 flex flex-col justify-between">
+      <main className="flex-1 max-w-lg mx-auto w-full p-3 sm:p-4 flex flex-col justify-between">
         {/* LOBBY / WAITING STATE */}
         {(gameStatus === "LOBBY" || gameStatus === "READY") && (
-          <div className="my-auto text-center p-8 rounded-2xl bg-[#09090f] border border-[#1e1e2c] space-y-4">
-            <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto">
+          <div className="my-auto text-center p-6 sm:p-8 rounded-2xl bg-white border border-slate-200/80 shadow-sm space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 text-blue-600 flex items-center justify-center mx-auto shadow-xs">
               <Radio className="w-6 h-6 animate-pulse" />
             </div>
             <div>
-              <div className="font-mono text-xs uppercase tracking-widest text-amber-400 font-bold">
-                ARENA SYNCHRONIZED
-              </div>
-              <h2 className="text-xl font-black text-white font-mono mt-1">
-                STAND BY FOR ROUND 1
+              <span className="text-[11px] uppercase tracking-wider text-blue-600 font-bold bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100">
+                Arena Synchronized
+              </span>
+              <h2 className="text-xl font-black text-slate-900 tracking-tight mt-2">
+                Waiting for Round 1
               </h2>
-              <p className="text-xs text-neutral-400 mt-2 leading-relaxed">
-                Terminal is locked in exam mode. Do not minimize this screen. The host will launch the first challenge shortly.
+              <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto leading-relaxed">
+                Terminal is locked in secure exam mode. Do not leave this tab. The host will start the quiz shortly.
               </p>
             </div>
           </div>
@@ -736,17 +683,16 @@ export default function TeamTerminalPage() {
 
         {/* SKIPPED STATE (BULL'S PASS) */}
         {hasPassed && (
-          <div className="my-auto text-center p-8 rounded-2xl bg-amber-950/20 border border-amber-500/40 space-y-3">
-            <FastForward className="w-10 h-10 text-amber-400 mx-auto" />
-            <h2 className="text-lg font-black text-white font-mono uppercase">
-              BULL&apos;S PASS DEPLOYED
-            </h2>
-            <p className="text-xs text-neutral-300 leading-relaxed font-mono">
-              Your team skipped this round. Virtual coin balance preserved for upcoming rounds.
-            </p>
-            <div className="text-[10px] text-neutral-400 font-mono">
-              Global timer active on Smart Board...
+          <div className="my-auto text-center p-6 sm:p-8 rounded-2xl bg-white border border-blue-200 shadow-sm space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto">
+              <FastForward className="w-6 h-6" />
             </div>
+            <h2 className="text-lg font-black text-slate-900">
+              Bull&apos;s Pass Deployed
+            </h2>
+            <p className="text-xs text-slate-600 max-w-xs mx-auto leading-relaxed">
+              Your squad safely passed this round. Virtual coin balance is preserved.
+            </p>
           </div>
         )}
 
@@ -757,43 +703,43 @@ export default function TeamTerminalPage() {
           gameStatus === "ANSWER_REVEAL") &&
           currentQ &&
           !hasPassed && (
-            <div className="flex flex-col gap-3.5">
-              {/* Question Header & Brutal Monospace Timer */}
-              <div className="flex items-center justify-between border-b border-[#1c1c28] pb-3">
-                <div>
-                  <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-amber-400">
-                    ROUND {(gameState?.currentQuestionIndex || 0) + 1} // {currentQ.question.category}
+            <div className="flex flex-col gap-3">
+              {/* Question Sub-Header & Minimal Timer */}
+              <div className="flex items-center justify-between border-b border-slate-200 pb-2.5">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-xs font-bold uppercase tracking-wide text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
+                    Question {(gameState?.currentQuestionIndex || 0) + 1}
                   </span>
-                  <div className="text-[11px] text-neutral-400 font-mono">
-                    DIFFICULTY: {currentQ.question.difficulty}
-                  </div>
+                  <span className="text-xs font-medium text-slate-500 truncate max-w-[140px] sm:max-w-none">
+                    {currentQ.question.category}
+                  </span>
                 </div>
 
                 {/* Digital Clock */}
                 <div
-                  className={`flex items-center gap-1.5 px-3 py-1 rounded border font-mono font-bold text-lg ${
-                    remainingSeconds <= 30
-                      ? "bg-red-950/50 border-red-500 text-red-400 animate-pulse"
-                      : remainingSeconds <= 60
-                      ? "bg-orange-950/30 border-orange-500 text-orange-300"
-                      : "bg-[#101016] border-[#222230] text-amber-400"
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-xl font-mono font-bold text-sm sm:text-base border ${
+                    remainingSeconds <= 15
+                      ? "bg-red-50 border-red-300 text-red-700 animate-pulse"
+                      : remainingSeconds <= 45
+                      ? "bg-amber-50 border-amber-300 text-amber-800"
+                      : "bg-blue-50 border-blue-200 text-blue-800"
                   }`}
                 >
                   <Clock className="w-4 h-4" />
                   <span>{timerDisplay}</span>
-                  {isPaused && <span className="text-[10px] text-amber-400 ml-1">PAUSED</span>}
+                  {isPaused && <span className="text-[10px] text-amber-700 ml-1">PAUSED</span>}
                 </div>
               </div>
 
               {/* Question Card */}
-              <div className="p-4 rounded-xl bg-[#0a0a10] border border-[#20202e] space-y-2">
-                <p className="text-sm sm:text-base font-bold text-white leading-snug">
+              <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs space-y-2.5">
+                <p className="text-sm sm:text-base font-bold text-slate-900 leading-relaxed">
                   {currentQ.question.text}
                 </p>
 
                 {/* Image if present */}
                 {currentQ.question.imageUrl && (
-                  <div className="rounded-lg overflow-hidden border border-[#222230] max-h-40 bg-black">
+                  <div className="rounded-xl overflow-hidden border border-slate-200 max-h-44 bg-slate-100">
                     <img
                       src={currentQ.question.imageUrl}
                       alt="Question Reference"
@@ -804,33 +750,33 @@ export default function TeamTerminalPage() {
 
                 {/* Private Unlocked Clues */}
                 {hintText && (
-                  <div className="p-2.5 rounded bg-amber-950/30 border border-amber-500/40 text-amber-200 text-xs flex items-start gap-2">
-                    <Lightbulb className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                  <div className="p-3 rounded-xl bg-blue-50/70 border border-blue-200 text-blue-950 text-xs flex items-start gap-2">
+                    <Lightbulb className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                     <div>
-                      <div className="font-mono text-[10px] font-bold uppercase text-amber-400">
-                        BULL&apos;S HINT CLUE:
+                      <div className="font-bold text-[10px] uppercase text-blue-700">
+                        Unlocked Hint:
                       </div>
-                      <div className="text-[11px] mt-0.5">{hintText}</div>
+                      <div className="text-xs text-slate-800 mt-0.5">{hintText}</div>
                     </div>
                   </div>
                 )}
 
                 {visualClueUrl && (
-                  <div className="p-2.5 rounded bg-purple-950/30 border border-purple-500/40 text-purple-200">
-                    <div className="font-mono text-[10px] font-bold uppercase text-purple-400 mb-1 flex items-center gap-1">
+                  <div className="p-3 rounded-xl bg-purple-50/70 border border-purple-200 text-purple-950">
+                    <div className="font-bold text-[10px] uppercase text-purple-700 mb-1 flex items-center gap-1">
                       <Eye className="w-3.5 h-3.5" />
-                      <span>VISION BOOST CLUE:</span>
+                      <span>Vision Clue:</span>
                     </div>
                     <img
                       src={visualClueUrl}
                       alt="Vision Clue"
-                      className="rounded max-h-36 w-full object-cover"
+                      className="rounded-lg max-h-36 w-full object-cover border border-purple-200"
                     />
                   </div>
                 )}
               </div>
 
-              {/* 4 Combat Option Buttons */}
+              {/* 4 Combat Option Buttons - Single Column on Mobile */}
               <div className="grid grid-cols-1 gap-2">
                 {[
                   { key: "A", text: currentQ.question.optionA },
@@ -844,21 +790,21 @@ export default function TeamTerminalPage() {
                   const isReveal = gameStatus === "ANSWER_REVEAL";
                   const isCorrect = isReveal && currentQ.correctOption === opt.key;
 
-                  let style = "bg-[#0d0d14] border-[#1e1e2c] text-neutral-200 hover:border-amber-500/50";
+                  let style = "bg-white border-slate-200 text-slate-800 hover:border-blue-300 hover:bg-blue-50/20";
                   if (isEliminated) {
-                    style = "bg-[#060608] border-[#14141c] text-neutral-700 line-through opacity-30 cursor-not-allowed";
+                    style = "bg-slate-100 border-slate-200 text-slate-400 line-through opacity-40 cursor-not-allowed";
                   } else if (isReveal) {
                     if (isCorrect) {
-                      style = "bg-emerald-950/60 border-emerald-500 text-white font-bold ring-2 ring-emerald-500/60";
+                      style = "bg-emerald-600 border-emerald-600 text-white font-bold shadow-sm";
                     } else if (isLocked && !isCorrect) {
-                      style = "bg-red-950/50 border-red-500 text-red-200 opacity-80";
+                      style = "bg-red-50 border-red-300 text-red-800 opacity-90";
                     } else {
-                      style = "bg-[#08080c] border-[#161620] text-neutral-600 opacity-40";
+                      style = "bg-slate-50 border-slate-200 text-slate-400 opacity-50";
                     }
                   } else if (isLocked) {
-                    style = "bg-amber-500/20 border-amber-500 text-amber-200 font-bold ring-2 ring-amber-500/40";
+                    style = "bg-blue-600 border-blue-600 text-white font-bold shadow-sm shadow-blue-500/20";
                   } else if (isSelected) {
-                    style = "bg-amber-500/10 border-amber-400 text-white";
+                    style = "bg-blue-50 border-blue-500 text-blue-900 font-semibold ring-1 ring-blue-500/30";
                   }
 
                   return (
@@ -867,34 +813,34 @@ export default function TeamTerminalPage() {
                       type="button"
                       disabled={isEliminated || !!lockedAnswer || gameStatus !== "QUESTION_ACTIVE"}
                       onClick={() => setSelectedOption(opt.key)}
-                      className={`p-3 rounded-lg border text-left transition flex items-center justify-between text-xs sm:text-sm font-sans ${style}`}
+                      className={`p-3.5 rounded-xl border text-left transition flex items-center justify-between text-xs sm:text-sm font-sans min-h-[48px] active:scale-[0.99] cursor-pointer ${style}`}
                     >
-                      <div className="flex items-center gap-2.5">
+                      <div className="flex items-center gap-3">
                         <span
-                          className={`w-6 h-6 rounded flex items-center justify-center font-mono text-xs font-bold shrink-0 ${
-                            isCorrect
-                              ? "bg-emerald-500 text-black"
-                              : isLocked
-                              ? "bg-amber-500 text-black"
-                              : "bg-[#181822] text-amber-400"
+                          className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${
+                            isCorrect || isLocked
+                              ? "bg-white text-blue-700"
+                              : isSelected
+                              ? "bg-blue-600 text-white"
+                              : "bg-slate-100 text-slate-700"
                           }`}
                         >
                           {opt.key}
                         </span>
-                        <span className="font-medium">{opt.text}</span>
+                        <span className="leading-snug">{opt.text}</span>
                       </div>
 
                       {isLocked && (
-                        <div className="flex items-center gap-1 text-[10px] font-mono font-bold text-amber-400 uppercase shrink-0">
-                          <Lock className="w-3 h-3" />
-                          <span>LOCKED</span>
+                        <div className="flex items-center gap-1 text-[11px] font-bold text-blue-100 uppercase shrink-0">
+                          <Lock className="w-3.5 h-3.5" />
+                          <span>Locked</span>
                         </div>
                       )}
 
                       {isCorrect && (
-                        <div className="flex items-center gap-1 text-[10px] font-mono font-bold text-emerald-400 uppercase shrink-0">
-                          <CheckCircle2 className="w-3 h-3" />
-                          <span>CORRECT</span>
+                        <div className="flex items-center gap-1 text-[11px] font-bold text-white uppercase shrink-0">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>Correct</span>
                         </div>
                       )}
                     </button>
@@ -902,40 +848,38 @@ export default function TeamTerminalPage() {
                 })}
               </div>
 
-              {/* Explicit Lock Button */}
+              {/* Lock Button */}
               {!lockedAnswer && gameStatus === "QUESTION_ACTIVE" && (
                 <button
                   type="button"
                   disabled={!selectedOption || lockingIn}
                   onClick={() => setConfirmModal({ type: "answer", data: selectedOption })}
-                  className="w-full py-3 rounded-lg bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 text-black font-mono font-black text-xs uppercase tracking-widest disabled:opacity-40 shadow-lg shadow-amber-500/20 cursor-pointer flex items-center justify-center gap-2"
+                  className="w-full py-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold text-xs uppercase tracking-wider disabled:opacity-40 shadow-sm shadow-blue-500/20 cursor-pointer flex items-center justify-center gap-2 min-h-[48px]"
                 >
                   <Lock className="w-3.5 h-3.5" />
-                  <span>LOCK IN SELECTION [{selectedOption || "NONE"}]</span>
+                  <span>Lock Answer [{selectedOption || "None"}]</span>
                 </button>
               )}
 
-              {/* Locked Confirmation Banner */}
+              {/* Locked Notice */}
               {lockedAnswer && (
-                <div className="p-2.5 rounded bg-[#0e0e16] border border-amber-500/40 text-amber-200 text-xs flex items-center justify-between font-mono">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 text-xs flex items-center justify-between">
+                  <div className="flex items-center gap-2 font-medium">
+                    <CheckCircle2 className="w-4 h-4 text-blue-600" />
                     <span>Answer Locked: Option {lockedAnswer.selectedOption}</span>
                   </div>
-                  <span className="text-[10px] text-neutral-400">AWAITING ROUND END</span>
+                  <span className="text-[11px] text-blue-600 font-semibold">Waiting for Reveal</span>
                 </div>
               )}
             </div>
           )}
 
-        {/* TACTICAL COMBAT LIFELINES */}
+        {/* LIFELINES DRAWER */}
         {gameStatus === "QUESTION_ACTIVE" && !hasPassed && !lockedAnswer && (
-          <div className="mt-3 pt-3 border-t border-[#1a1a26]">
-            <div className="flex items-center justify-between text-[11px] font-mono text-neutral-400 mb-2">
-              <span className="font-bold uppercase tracking-wider text-neutral-300">
-                TACTICAL LIFELINES
-              </span>
-              <span>ATOMIC DEDUCTION</span>
+          <div className="mt-2.5 pt-2.5 border-t border-slate-200">
+            <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500 mb-2">
+              <span>Tactical Lifelines</span>
+              <span className="text-blue-600">Balance: {(team?.currentBalance ?? 0).toLocaleString()} Coins</span>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
@@ -948,13 +892,16 @@ export default function TeamTerminalPage() {
                     data: { type: "BULLS_HINT", cost: 500, title: "Bull's Hint" },
                   })
                 }
-                className="p-2 rounded bg-[#0b0b12] border border-[#1e1e2c] text-left hover:border-amber-500/40 transition disabled:opacity-30"
+                className="p-2.5 rounded-xl bg-white border border-slate-200 text-left hover:border-blue-300 hover:bg-blue-50/30 transition disabled:opacity-40 active:scale-[0.98]"
               >
-                <div className="flex items-center justify-between font-mono text-[11px] font-bold text-amber-400">
-                  <span>HINT</span>
-                  <span>500 C</span>
+                <div className="flex items-center justify-between text-xs font-bold text-slate-800">
+                  <span className="flex items-center gap-1">
+                    <Lightbulb className="w-3.5 h-3.5 text-blue-600" />
+                    Hint
+                  </span>
+                  <span className="text-blue-600 font-mono text-[11px]">500 C</span>
                 </div>
-                <div className="text-[10px] text-neutral-400 mt-0.5">Private text clue</div>
+                <div className="text-[10px] text-slate-500 mt-0.5">Text clue</div>
               </button>
 
               <button
@@ -966,13 +913,16 @@ export default function TeamTerminalPage() {
                     data: { type: "VISION_BOOST", cost: 1500, title: "Vision Boost" },
                   })
                 }
-                className="p-2 rounded bg-[#0b0b12] border border-[#1e1e2c] text-left hover:border-purple-500/40 transition disabled:opacity-30"
+                className="p-2.5 rounded-xl bg-white border border-slate-200 text-left hover:border-blue-300 hover:bg-blue-50/30 transition disabled:opacity-40 active:scale-[0.98]"
               >
-                <div className="flex items-center justify-between font-mono text-[11px] font-bold text-purple-400">
-                  <span>VISION</span>
-                  <span>1,500 C</span>
+                <div className="flex items-center justify-between text-xs font-bold text-slate-800">
+                  <span className="flex items-center gap-1">
+                    <Eye className="w-3.5 h-3.5 text-blue-600" />
+                    Vision
+                  </span>
+                  <span className="text-blue-600 font-mono text-[11px]">1,500 C</span>
                 </div>
-                <div className="text-[10px] text-neutral-400 mt-0.5">Private optical clue</div>
+                <div className="text-[10px] text-slate-500 mt-0.5">Visual clue</div>
               </button>
 
               <button
@@ -984,13 +934,13 @@ export default function TeamTerminalPage() {
                     data: { type: "50_50_BLAST", cost: 2000, title: "50-50 Blast" },
                   })
                 }
-                className="p-2 rounded bg-[#0b0b12] border border-[#1e1e2c] text-left hover:border-amber-500/40 transition disabled:opacity-30"
+                className="p-2.5 rounded-xl bg-white border border-slate-200 text-left hover:border-blue-300 hover:bg-blue-50/30 transition disabled:opacity-40 active:scale-[0.98]"
               >
-                <div className="flex items-center justify-between font-mono text-[11px] font-bold text-amber-400">
+                <div className="flex items-center justify-between text-xs font-bold text-slate-800">
                   <span>50-50</span>
-                  <span>2,000 C</span>
+                  <span className="text-blue-600 font-mono text-[11px]">2,000 C</span>
                 </div>
-                <div className="text-[10px] text-neutral-400 mt-0.5">Eliminate 2 wrong</div>
+                <div className="text-[10px] text-slate-500 mt-0.5">Eliminate 2 wrong</div>
               </button>
 
               <button
@@ -1002,13 +952,16 @@ export default function TeamTerminalPage() {
                     data: { type: "BULLS_PASS", cost: 2500, title: "Bull's Pass" },
                   })
                 }
-                className="p-2 rounded bg-[#0b0b12] border border-[#1e1e2c] text-left hover:border-red-500/40 transition disabled:opacity-30"
+                className="p-2.5 rounded-xl bg-white border border-slate-200 text-left hover:border-blue-300 hover:bg-blue-50/30 transition disabled:opacity-40 active:scale-[0.98]"
               >
-                <div className="flex items-center justify-between font-mono text-[11px] font-bold text-red-400">
-                  <span>PASS</span>
-                  <span>2,500 C</span>
+                <div className="flex items-center justify-between text-xs font-bold text-slate-800">
+                  <span className="flex items-center gap-1">
+                    <FastForward className="w-3.5 h-3.5 text-blue-600" />
+                    Pass
+                  </span>
+                  <span className="text-blue-600 font-mono text-[11px]">2,500 C</span>
                 </div>
-                <div className="text-[10px] text-neutral-400 mt-0.5">Skip round safely</div>
+                <div className="text-[10px] text-slate-500 mt-0.5">Skip safely</div>
               </button>
             </div>
           </div>
@@ -1016,24 +969,26 @@ export default function TeamTerminalPage() {
 
         {/* LEADERBOARD VIEW */}
         {gameStatus === "LEADERBOARD" && (
-          <div className="my-auto p-4 rounded-xl bg-[#09090f] border border-[#1e1e2c] space-y-3 font-mono text-xs">
-            <div className="flex items-center justify-between border-b border-[#1c1c28] pb-2">
-              <span className="font-bold text-amber-400 uppercase">ARENA STANDINGS</span>
-              <span className="text-white">Your Score: {team?.score} pts</span>
+          <div className="my-auto p-4 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-3 text-xs">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+              <span className="font-bold text-slate-900 text-sm">Leaderboard</span>
+              <span className="text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                Score: {team?.score} pts
+              </span>
             </div>
-            <div className="divide-y divide-[#181824] max-h-56 overflow-y-auto">
+            <div className="divide-y divide-slate-100 max-h-56 overflow-y-auto">
               {leaderboard.map((lb) => (
                 <div
                   key={lb.teamId}
-                  className={`py-1.5 px-1 flex items-center justify-between ${
-                    lb.teamId === team?.id ? "text-amber-400 font-bold bg-amber-500/10 rounded" : "text-neutral-400"
+                  className={`py-2 px-1.5 flex items-center justify-between ${
+                    lb.teamId === team?.id ? "text-blue-900 font-bold bg-blue-50/70 rounded-lg" : "text-slate-600"
                   }`}
                 >
                   <div className="flex items-center gap-2">
-                    <span className="text-neutral-600">#{lb.rank}</span>
-                    <span className="text-white">{lb.teamName}</span>
+                    <span className="w-5 font-mono text-slate-400">#{lb.rank}</span>
+                    <span className="font-semibold text-slate-900">{lb.teamName}</span>
                   </div>
-                  <span>{lb.score} PTS</span>
+                  <span className="font-mono font-bold text-blue-700">{lb.score} pts</span>
                 </div>
               ))}
             </div>
@@ -1041,56 +996,54 @@ export default function TeamTerminalPage() {
         )}
       </main>
 
-      {/* ========================================================= */}
       {/* CONFIRMATION ACTION MODAL */}
-      {/* ========================================================= */}
       {confirmModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0c0c14] border border-[#262638] rounded-xl max-w-xs w-full p-5 text-center space-y-3 font-mono">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-xs w-full p-5 text-center space-y-3 shadow-xl">
             {confirmModal.type === "answer" ? (
               <>
-                <div className="text-xs uppercase tracking-widest text-amber-400 font-bold">
-                  LOCK ANSWER COMMITMENT
+                <div className="text-xs uppercase tracking-wide text-blue-600 font-bold">
+                  Confirm Answer Lock
                 </div>
-                <p className="text-xs text-neutral-300">
-                  Lock Option <strong className="text-amber-400 text-sm">[{confirmModal.data}]</strong>? Once locked, you cannot alter your decision.
+                <p className="text-xs text-slate-600">
+                  Lock in Option <strong className="text-blue-700 text-sm font-bold">[{confirmModal.data}]</strong>? You cannot change your choice once locked.
                 </p>
                 <div className="flex gap-2 pt-2">
                   <button
                     onClick={() => setConfirmModal(null)}
-                    className="flex-1 py-2 rounded bg-[#161622] text-neutral-400 text-xs hover:text-white"
+                    className="flex-1 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-600 text-xs font-semibold hover:bg-slate-50 cursor-pointer"
                   >
-                    CANCEL
+                    Cancel
                   </button>
                   <button
                     onClick={() => submitAnswer(confirmModal.data)}
-                    className="flex-1 py-2 rounded bg-amber-500 text-black text-xs font-black uppercase hover:bg-amber-400"
+                    className="flex-1 py-2.5 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 shadow-sm shadow-blue-500/20 cursor-pointer"
                   >
-                    CONFIRM LOCK
+                    Confirm Lock
                   </button>
                 </div>
               </>
             ) : (
               <>
-                <div className="text-xs uppercase tracking-widest text-amber-400 font-bold">
-                  PURCHASE LIFELINE
+                <div className="text-xs uppercase tracking-wide text-blue-600 font-bold">
+                  Purchase Lifeline
                 </div>
-                <p className="text-xs text-neutral-300">
-                  Deduct <strong className="text-amber-400">{confirmModal.data.cost} Coins</strong> for{" "}
-                  <strong className="text-white">{confirmModal.data.title}</strong>?
+                <p className="text-xs text-slate-600">
+                  Deduct <strong className="text-blue-700 font-bold">{confirmModal.data.cost} Coins</strong> for{" "}
+                  <strong className="text-slate-900 font-bold">{confirmModal.data.title}</strong>?
                 </p>
                 <div className="flex gap-2 pt-2">
                   <button
                     onClick={() => setConfirmModal(null)}
-                    className="flex-1 py-2 rounded bg-[#161622] text-neutral-400 text-xs hover:text-white"
+                    className="flex-1 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-600 text-xs font-semibold hover:bg-slate-50 cursor-pointer"
                   >
-                    CANCEL
+                    Cancel
                   </button>
                   <button
                     onClick={() => buyLifeline(confirmModal.data.type)}
-                    className="flex-1 py-2 rounded bg-amber-500 text-black text-xs font-black uppercase hover:bg-amber-400"
+                    className="flex-1 py-2.5 rounded-xl bg-blue-600 text-white text-xs font-bold hover:bg-blue-700 shadow-sm shadow-blue-500/20 cursor-pointer"
                   >
-                    DEDUCT & ACTIVATE
+                    Activate
                   </button>
                 </div>
               </>
@@ -1098,12 +1051,6 @@ export default function TeamTerminalPage() {
           </div>
         </div>
       )}
-
-      {/* FOOTER BAR */}
-      <footer className="border-t border-[#14141e] px-4 py-2 text-center font-mono text-[9px] text-neutral-400 flex items-center justify-between">
-        <span>SECURITY LOCK ACTIVE // 3 STRIKES POLICY</span>
-        <span>COPY/PASTE RESTRICTED</span>
-      </footer>
     </div>
   );
 }
