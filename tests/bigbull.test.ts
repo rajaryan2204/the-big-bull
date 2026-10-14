@@ -408,9 +408,10 @@ describe("THE BIG BULL - Comprehensive Game Rules & Security Tests", () => {
 
   // 26. Team Members / Participants Support (Solo, Pairs, Trios)
   it("Rule 26: Should store and return team members for solo, pairs, and squads", async () => {
+    const uniqueSuffix = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     // 3-member squad (Team A)
     const squadA = await store.createTeam(
-      "SQUAD-A",
+      `SQ-${uniqueSuffix}`,
       "Apex Alpha",
       "SECRET-A",
       5000,
@@ -421,7 +422,7 @@ describe("THE BIG BULL - Comprehensive Game Rules & Security Tests", () => {
 
     // 1-member solo team (Team B)
     const soloB = await store.createTeam(
-      "SOLO-B",
+      `SO-${uniqueSuffix}`,
       "Lone Wolf",
       "SECRET-B",
       5000,
@@ -440,8 +441,9 @@ describe("THE BIG BULL - Comprehensive Game Rules & Security Tests", () => {
 
   // 27. Leaderboard includes squad members
   it("Rule 27: Leaderboard entries must include squad members", async () => {
+    const uniqueSuffix = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     const squad = await store.createTeam(
-      "LEAD-SQUAD",
+      `LS-${uniqueSuffix}`,
       "Leaderboard Champions",
       "SECRET-C",
       5000,

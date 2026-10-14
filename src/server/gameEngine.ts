@@ -78,24 +78,31 @@ export class GameEngine {
     }, Math.max(100, delayMs));
   }
 
+  public async getActiveStorage(): Promise<StorageEngine> {
+    if (!this.storage) {
+      this.storage = await getStorage();
+    }
+    return this.storage;
+  }
+
   // --- Game State Actions ---
 
   public async startGame() {
-    if (!this.storage) return;
-    const game = await this.storage.getCurrentGame();
+    const storage = await this.getActiveStorage();
+    const game = await storage.getCurrentGame();
     if (game.status !== "LOBBY" && game.status !== "READY") {
       throw new Error(`Cannot start game from current status: ${game.status}`);
     }
 
     await this.openQuestionAtIndex(0);
-    await this.storage.logAudit("GAME_STARTED", "ADMIN", { questionIndex: 0 });
+    await storage.logAudit("GAME_STARTED", "ADMIN", { questionIndex: 0 });
     await this.broadcastAll();
   }
 
   public async openQuestionAtIndex(orderIndex: number) {
-    if (!this.storage) return;
-    const game = await this.storage.getCurrentGame();
-    const gq = await this.storage.getGameQuestionByOrder(game.id, orderIndex);
+    const storage = await this.getActiveStorage();
+    const game = await storage.getCurrentGame();
+    const gq = await storage.getGameQuestionByOrder(game.id, orderIndex);
     if (!gq) {
       throw new Error(`Question at index ${orderIndex} not found`);
     }
@@ -104,7 +111,7 @@ export class GameEngine {
     const openedAt = new Date().toISOString();
     const deadline = new Date(Date.now() + durationSeconds * 1000).toISOString();
 
-    await this.storage.updateGameQuestion(gq.id, {
+    await storage.updateGameQuestion(gq.id, {
       status: "ACTIVE",
       openedAt,
       deadline,
@@ -112,10 +119,10 @@ export class GameEngine {
       remainingOnPause: null,
     });
 
-    await this.storage.updateGameStatus("QUESTION_ACTIVE", orderIndex);
+    await storage.updateGameStatus("QUESTION_ACTIVE", orderIndex);
     this.scheduleAutoClose(durationSeconds * 1000);
 
-    await this.storage.logAudit("QUESTION_OPENED", "ADMIN", {
+    await storage.logAudit("QUESTION_OPENED", "ADMIN", {
       orderIndex,
       questionId: gq.questionId,
       durationSeconds,
@@ -125,8 +132,8 @@ export class GameEngine {
   }
 
   public async pauseGame() {
-    if (!this.storage) return;
-    const game = await this.storage.getCurrentGame();
+    const storage = await this.getActiveStorage();
+    const game = await storage.getCurrentGame();
     if (game.status !== "QUESTION_ACTIVE" || !game.currentQuestion) {
       throw new Error("Cannot pause game unless a question is actively running");
     }
@@ -141,20 +148,20 @@ export class GameEngine {
       : Date.now();
     const remainingMs = Math.max(0, deadlineMs - Date.now());
 
-    await this.storage.updateGameQuestion(game.currentQuestion.id, {
+    await storage.updateGameQuestion(game.currentQuestion.id, {
       status: "PAUSED",
       remainingOnPause: remainingMs,
     });
 
-    await this.storage.updateGameStatus("QUESTION_PAUSED");
-    await this.storage.logAudit("GAME_PAUSED", "ADMIN", { remainingSeconds: Math.round(remainingMs / 1000) });
+    await storage.updateGameStatus("QUESTION_PAUSED");
+    await storage.logAudit("GAME_PAUSED", "ADMIN", { remainingSeconds: Math.round(remainingMs / 1000) });
 
     await this.broadcastAll();
   }
 
   public async resumeGame() {
-    if (!this.storage) return;
-    const game = await this.storage.getCurrentGame();
+    const storage = await this.getActiveStorage();
+    const game = await storage.getCurrentGame();
     if (game.status !== "QUESTION_PAUSED" || !game.currentQuestion) {
       throw new Error("Cannot resume game unless question is paused");
     }
@@ -162,22 +169,22 @@ export class GameEngine {
     const remainingMs = game.currentQuestion.remainingOnPause || 30000;
     const deadline = new Date(Date.now() + remainingMs).toISOString();
 
-    await this.storage.updateGameQuestion(game.currentQuestion.id, {
+    await storage.updateGameQuestion(game.currentQuestion.id, {
       status: "ACTIVE",
       deadline,
       remainingOnPause: null,
     });
 
-    await this.storage.updateGameStatus("QUESTION_ACTIVE");
+    await storage.updateGameStatus("QUESTION_ACTIVE");
     this.scheduleAutoClose(remainingMs);
 
-    await this.storage.logAudit("GAME_RESUMED", "ADMIN", { deadline });
+    await storage.logAudit("GAME_RESUMED", "ADMIN", { deadline });
     await this.broadcastAll();
   }
 
   public async closeCurrentQuestion(reason: string = "ADMIN_CLOSED") {
-    if (!this.storage) return;
-    const game = await this.storage.getCurrentGame();
+    const storage = await this.getActiveStorage();
+    const game = await storage.getCurrentGame();
     if (game.status !== "QUESTION_ACTIVE" && game.status !== "QUESTION_PAUSED") {
       return;
     }
@@ -188,29 +195,29 @@ export class GameEngine {
     }
 
     if (game.currentQuestion) {
-      await this.storage.updateGameQuestion(game.currentQuestion.id, {
+      await storage.updateGameQuestion(game.currentQuestion.id, {
         status: "CLOSED",
         closedAt: new Date().toISOString(),
       });
     }
 
-    await this.storage.updateGameStatus("QUESTION_CLOSED");
-    await this.storage.logAudit("QUESTION_CLOSED", "SYSTEM", { reason });
+    await storage.updateGameStatus("QUESTION_CLOSED");
+    await storage.logAudit("QUESTION_CLOSED", "SYSTEM", { reason });
 
     await this.broadcastAll();
   }
 
   public async revealAnswer() {
-    if (!this.storage) return;
-    const game = await this.storage.getCurrentGame();
+    const storage = await this.getActiveStorage();
+    const game = await storage.getCurrentGame();
     if (!game.currentQuestion) {
       throw new Error("No question to reveal");
     }
 
-    const result = await this.storage.revealAnswersAndScore(game.id, game.currentQuestion.id);
-    await this.storage.updateGameStatus("ANSWER_REVEAL");
+    const result = await storage.revealAnswersAndScore(game.id, game.currentQuestion.id);
+    await storage.updateGameStatus("ANSWER_REVEAL");
 
-    await this.storage.logAudit("ANSWER_REVEALED", "ADMIN", {
+    await storage.logAudit("ANSWER_REVEALED", "ADMIN", {
       questionId: game.currentQuestion.questionId,
       correctOption: result.correctOption,
     });
@@ -220,15 +227,15 @@ export class GameEngine {
   }
 
   public async showLeaderboard() {
-    if (!this.storage) return;
-    await this.storage.updateGameStatus("LEADERBOARD");
-    await this.storage.logAudit("LEADERBOARD_DISPLAYED", "ADMIN");
+    const storage = await this.getActiveStorage();
+    await storage.updateGameStatus("LEADERBOARD");
+    await storage.logAudit("LEADERBOARD_DISPLAYED", "ADMIN");
     await this.broadcastAll();
   }
 
   public async nextQuestion() {
-    if (!this.storage) return;
-    const game = await this.storage.getCurrentGame();
+    const storage = await this.getActiveStorage();
+    const game = await storage.getCurrentGame();
     const nextIdx = game.currentQuestionIndex + 1;
 
     if (nextIdx >= game.totalQuestions) {
@@ -240,17 +247,17 @@ export class GameEngine {
   }
 
   public async endGame() {
-    if (!this.storage) return;
+    const storage = await this.getActiveStorage();
     if (this.timerTimeout) clearTimeout(this.timerTimeout);
-    await this.storage.updateGameStatus("FINISHED");
-    await this.storage.logAudit("GAME_FINISHED", "ADMIN");
+    await storage.updateGameStatus("FINISHED");
+    await storage.logAudit("GAME_FINISHED", "ADMIN");
     await this.broadcastAll();
   }
 
   public async resetGame(options?: any) {
-    if (!this.storage) return;
+    const storage = await this.getActiveStorage();
     if (this.timerTimeout) clearTimeout(this.timerTimeout);
-    const game = await this.storage.createOrResetGame(options);
+    const game = await storage.createOrResetGame(options);
     await this.broadcastAll();
     return game;
   }

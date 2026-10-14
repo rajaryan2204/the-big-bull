@@ -218,7 +218,7 @@ export default function SmartBoardPage() {
 
       // If game is in Lobby, automatically start Question 1!
       if (!gameState || gameState.status === "LOBBY" || gameState.status === "READY") {
-        await fetch("/api/admin/game/control", {
+        const ctrlRes = await fetch("/api/admin/game/control", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -226,6 +226,17 @@ export default function SmartBoardPage() {
           },
           body: JSON.stringify({ action: "start_game" }),
         });
+        const ctrlData = await ctrlRes.json();
+        if (!ctrlRes.ok) {
+          throw new Error(ctrlData.error || "Failed to start Question 1");
+        }
+        if (ctrlData.game) {
+          setGameState(ctrlData.game);
+          if (ctrlData.game.currentQuestion?.deadline) {
+            const ms = new Date(ctrlData.game.currentQuestion.deadline).getTime();
+            setRemainingSeconds(Math.max(0, Math.ceil((ms - Date.now()) / 1000)));
+          }
+        }
       }
 
       setShowHostModal(false);
@@ -360,6 +371,16 @@ export default function SmartBoardPage() {
           {/* Host Quick Buttons */}
           {isHostAuthenticated ? (
             <div className="flex items-center gap-1.5">
+              {(status === "LOBBY" || status === "READY") && (
+                <button
+                  onClick={() => handleHostCommand("start_game")}
+                  className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  title="Launch Round 1"
+                >
+                  <Play className="w-3.5 h-3.5 fill-current" />
+                  <span>Launch Round 1</span>
+                </button>
+              )}
               {status === "QUESTION_ACTIVE" && (
                 <>
                   <button
@@ -546,11 +567,21 @@ export default function SmartBoardPage() {
               {/* Host Start Button directly on Smart Board */}
               <div className="pt-2">
                 <button
-                  onClick={() => setShowHostModal(true)}
+                  onClick={() => {
+                    if (isHostAuthenticated) {
+                      handleHostCommand("start_game");
+                    } else {
+                      setShowHostModal(true);
+                    }
+                  }}
                   className="px-8 py-4 rounded-2xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-extrabold text-base uppercase tracking-wider shadow-md shadow-blue-500/25 transition flex items-center justify-center gap-3 cursor-pointer min-h-[52px]"
                 >
                   <Play className="w-5 h-5 fill-current" />
-                  <span>Start Live Competition (Host Login)</span>
+                  <span>
+                    {isHostAuthenticated
+                      ? "Launch Round 1 (5-Min Live Timer)"
+                      : "Start Live Competition (Host Login)"}
+                  </span>
                 </button>
               </div>
 
