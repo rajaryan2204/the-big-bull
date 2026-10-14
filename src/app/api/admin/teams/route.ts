@@ -97,3 +97,33 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: err.message }, { status: 400 });
   }
 }
+
+export async function DELETE(req: NextRequest) {
+  const cookieName = process.env.ADMIN_COOKIE_NAME || "bigbull_admin_token";
+  const token =
+    req.cookies.get(cookieName)?.value ||
+    req.headers.get("authorization")?.replace("Bearer ", "");
+
+  if (!token || !verifyAdminToken(token)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+    if (!id) return NextResponse.json({ error: "Team ID required" }, { status: 400 });
+
+    const storage = await getStorage();
+    await storage.deleteTeam(id);
+    await storage.logAudit("TEAM_DELETED", "ADMIN", { teamId: id });
+
+    try {
+      const { getGameEngine } = await import("@/src/server/gameEngine");
+      await getGameEngine().broadcastAll();
+    } catch (e) {}
+
+    return NextResponse.json({ success: true, message: "Team deleted successfully" });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 400 });
+  }
+}

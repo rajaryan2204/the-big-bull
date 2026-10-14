@@ -32,6 +32,8 @@ import {
   LogOut,
   X,
   Settings,
+  Sparkles,
+  CheckCircle2,
 } from "lucide-react";
 import {
   GameState,
@@ -69,6 +71,10 @@ export default function AdminDashboardPage() {
   // Modals & Forms
   const [showAddTeamModal, setShowAddTeamModal] = useState(false);
   const [newTeam, setNewTeam] = useState({ teamCode: "", name: "", accessCode: "", startingBalance: 5000 });
+  const [onSpotForm, setOnSpotForm] = useState({ name: "", teamCode: "", accessCode: "", startingBalance: 5000 });
+  const [recentlyCreatedTeam, setRecentlyCreatedTeam] = useState<{ teamCode: string; name: string; accessCode: string } | null>(null);
+  const [showEditTeamModal, setShowEditTeamModal] = useState<TeamPublic | null>(null);
+  const [editTeamForm, setEditTeamForm] = useState({ name: "", newAccessCode: "" });
   const [showAddQuestionModal, setShowAddQuestionModal] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<QuestionFull | null>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -305,7 +311,20 @@ export default function AdminDashboardPage() {
     }
   };
 
-  // Add Team
+  // Auto-generate next suggested code
+  const getNextSuggestedCode = () => {
+    let maxNum = 100;
+    for (const t of teams) {
+      const match = t.teamCode.match(/BULLS-(\d+)/i);
+      if (match) {
+        const num = parseInt(match[1], 10);
+        if (num > maxNum) maxNum = num;
+      }
+    }
+    return `BULLS-${maxNum + 1}`;
+  };
+
+  // Add Team (Standard Modal)
   const handleCreateTeam = async (e: React.FormEvent) => {
     e.preventDefault();
     const res = await fetch("/api/admin/teams", {
@@ -318,8 +337,82 @@ export default function AdminDashboardPage() {
       setTeams((prev) => [...prev, data.team]);
       setShowAddTeamModal(false);
       setNewTeam({ teamCode: "", name: "", accessCode: "", startingBalance: 5000 });
+      loadInitialData();
     } else {
       alert(data.error || "Failed to create team");
+    }
+  };
+
+  // On-Spot Quick Team Registration
+  const handleOnSpotCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const code = (onSpotForm.teamCode.trim() || getNextSuggestedCode()).toUpperCase();
+    const pass = onSpotForm.accessCode.trim() || code;
+    const res = await fetch("/api/admin/teams", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        teamCode: code,
+        name: onSpotForm.name.trim(),
+        accessCode: pass,
+        startingBalance: onSpotForm.startingBalance || 5000,
+      }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setTeams((prev) => [...prev, data.team]);
+      setRecentlyCreatedTeam({
+        teamCode: code,
+        name: onSpotForm.name.trim(),
+        accessCode: pass,
+      });
+      setOnSpotForm({ name: "", teamCode: "", accessCode: "", startingBalance: 5000 });
+      loadInitialData();
+    } else {
+      alert(data.error || "Failed to create team");
+    }
+  };
+
+  // Save Team Edits (Name & New Access Code)
+  const handleSaveTeamEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!showEditTeamModal) return;
+    try {
+      if (editTeamForm.name.trim() && editTeamForm.name !== showEditTeamModal.name) {
+        await fetch("/api/admin/teams", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: showEditTeamModal.id, name: editTeamForm.name.trim() }),
+        });
+      }
+      if (editTeamForm.newAccessCode.trim()) {
+        await fetch("/api/admin/teams", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            id: showEditTeamModal.id,
+            action: "reset_code",
+            newAccessCode: editTeamForm.newAccessCode.trim(),
+          }),
+        });
+      }
+      setShowEditTeamModal(null);
+      loadInitialData();
+    } catch (err: any) {
+      alert(err.message || "Failed to update team");
+    }
+  };
+
+  // Delete Team
+  const handleDeleteTeam = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to completely delete squad "${name}"? This cannot be undone.`)) return;
+    const res = await fetch(`/api/admin/teams?id=${id}`, { method: "DELETE" });
+    if (res.ok) {
+      setTeams((prev) => prev.filter((t) => t.id !== id));
+      loadInitialData();
+    } else {
+      const data = await res.json();
+      alert(data.error || "Failed to delete team");
     }
   };
 
@@ -600,6 +693,15 @@ export default function AdminDashboardPage() {
                     INCOGNITO GATE: {(gameState?.requireIncognito ?? true) ? "ON (STRICT)" : "OFF (PARDONED)"}
                   </span>
                 </button>
+
+                <button
+                  onClick={() => setActiveTab("teams")}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-bold transition cursor-pointer self-start sm:self-auto"
+                  title="Register walk-in teams on the spot"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>⚡ On-Spot Team Entry</span>
+                </button>
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
@@ -819,17 +921,114 @@ export default function AdminDashboardPage() {
               <div>
                 <h3 className="text-base sm:text-lg font-bold text-slate-900">Registered Teams & Credentials</h3>
                 <p className="text-xs text-slate-500">
-                  Manage team accounts, inspect coin balances, reset access codes, and credit coins.
+                  Manage team accounts, register walk-in squads on-the-spot, edit credentials, or adjust coins.
                 </p>
               </div>
 
               <button
                 onClick={() => setShowAddTeamModal(true)}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase shadow-xs cursor-pointer transition self-start sm:self-auto"
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs uppercase border border-slate-200 cursor-pointer transition self-start sm:self-auto"
               >
                 <Plus className="w-4 h-4" />
-                <span>Add Team</span>
+                <span>Custom Team Dialog</span>
               </button>
+            </div>
+
+            {/* On-Spot Quick Team Registration Card */}
+            <div className="p-5 rounded-2xl bg-white border-2 border-blue-200/90 shadow-xs space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-blue-50 text-blue-600">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm sm:text-base font-bold text-slate-900">
+                      ⚡ On-Spot Walk-In Team Registration
+                    </h4>
+                    <p className="text-xs text-slate-500">
+                      Enter team name and instantly generate their participant login credentials in 5 seconds.
+                    </p>
+                  </div>
+                </div>
+
+                <span className="text-[11px] font-mono text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 font-bold">
+                  Next Auto Code: {getNextSuggestedCode()}
+                </span>
+              </div>
+
+              <form onSubmit={handleOnSpotCreate} className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Team / Squad Name *</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Apex Predators"
+                    value={onSpotForm.name}
+                    onChange={(e) => setOnSpotForm({ ...onSpotForm, name: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs focus:bg-white focus:border-blue-600 outline-none transition"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Team Code
+                  </label>
+                  <input
+                    type="text"
+                    placeholder={getNextSuggestedCode()}
+                    value={onSpotForm.teamCode}
+                    onChange={(e) => setOnSpotForm({ ...onSpotForm, teamCode: e.target.value.toUpperCase() })}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-mono text-xs focus:bg-white focus:border-blue-600 outline-none transition"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Access Code (Auto-Matches)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Same as Team Code"
+                    value={onSpotForm.accessCode}
+                    onChange={(e) => setOnSpotForm({ ...onSpotForm, accessCode: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 font-mono text-xs focus:bg-white focus:border-blue-600 outline-none transition"
+                  />
+                </div>
+
+                <div className="flex items-end">
+                  <button
+                    type="submit"
+                    className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs uppercase shadow-xs transition flex items-center justify-center gap-1.5 cursor-pointer min-h-[38px]"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>⚡ Register & Issue Pass</span>
+                  </button>
+                </div>
+              </form>
+
+              {/* Instant Team Pass Notice */}
+              {recentlyCreatedTeam && (
+                <div className="p-3.5 rounded-xl bg-blue-50 border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span className="text-slate-800">
+                      <strong>{recentlyCreatedTeam.name}</strong> registered! Code: <code className="font-mono font-bold text-blue-700 bg-white px-1.5 py-0.5 rounded border border-blue-200">{recentlyCreatedTeam.teamCode}</code> • Password: <code className="font-mono font-bold text-blue-700 bg-white px-1.5 py-0.5 rounded border border-blue-200">{recentlyCreatedTeam.accessCode}</code>
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(
+                        `THE BIG BULL - Team Login Credentials\nSquad: ${recentlyCreatedTeam.name}\nTeam Code: ${recentlyCreatedTeam.teamCode}\nAccess Code: ${recentlyCreatedTeam.accessCode}\nURL: https://the-big-bull.vercel.app/`
+                      );
+                      alert("Team credentials copied to clipboard!");
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-1 cursor-pointer shrink-0 transition"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>Copy Team Pass</span>
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Teams Table */}
@@ -857,7 +1056,7 @@ export default function AdminDashboardPage() {
                           <span>{t.teamCode}</span>
                           <button
                             onClick={() => copyCode(t.teamCode)}
-                            className="text-slate-400 hover:text-blue-600 transition"
+                            className="text-slate-400 hover:text-blue-600 transition cursor-pointer"
                             title="Copy Code"
                           >
                             {copiedCode === t.teamCode ? (
@@ -905,6 +1104,17 @@ export default function AdminDashboardPage() {
                         💰 {t.currentBalance.toLocaleString()}
                       </td>
                       <td className="py-3 px-4 text-right space-x-1.5">
+                        <button
+                          onClick={() => {
+                            setShowEditTeamModal(t);
+                            setEditTeamForm({ name: t.name, newAccessCode: "" });
+                          }}
+                          className="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 font-semibold text-[11px] cursor-pointer transition inline-flex items-center gap-1"
+                          title="Edit Name / Reset Password"
+                        >
+                          <Edit2 className="w-3 h-3" />
+                          <span>Edit</span>
+                        </button>
                         {(t.strikesCount ?? 0) > 0 && (
                           <button
                             onClick={() => handleResetStrikes(t)}
@@ -918,7 +1128,7 @@ export default function AdminDashboardPage() {
                           onClick={() => setShowAdjustCoinsModal(t)}
                           className="px-2.5 py-1 rounded-lg bg-blue-50 border border-blue-200 text-blue-700 hover:bg-blue-100 font-semibold text-[11px] cursor-pointer transition"
                         >
-                          Adjust Coins
+                          Coins
                         </button>
                         <button
                           onClick={() => handleToggleDisableTeam(t)}
@@ -929,6 +1139,13 @@ export default function AdminDashboardPage() {
                           }`}
                         >
                           {t.isDisabled ? "Enable" : "Disable"}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteTeam(t.id, t.name)}
+                          className="p-1 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 cursor-pointer transition inline-flex items-center"
+                          title="Delete Team"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </td>
                     </tr>
@@ -1251,6 +1468,72 @@ export default function AdminDashboardPage() {
                   className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-xs transition cursor-pointer"
                 >
                   Create Team
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Team Modal */}
+      {showEditTeamModal && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 shadow-2xl rounded-2xl max-w-md w-full p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">
+                  Edit Squad: {showEditTeamModal.teamCode}
+                </h3>
+                <p className="text-xs text-slate-500">
+                  Update team name or reset their secret login code.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowEditTeamModal(null)}
+                className="text-slate-400 hover:text-slate-700 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveTeamEdit} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">Squad Name</label>
+                <input
+                  type="text"
+                  value={editTeamForm.name}
+                  onChange={(e) => setEditTeamForm({ ...editTeamForm, name: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-sm focus:border-blue-600 focus:bg-white focus:outline-hidden transition"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-bold mb-1">
+                  New Secret Access Code (Leave blank to keep existing)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Enter new secret password"
+                  value={editTeamForm.newAccessCode}
+                  onChange={(e) => setEditTeamForm({ ...editTeamForm, newAccessCode: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-sm font-mono focus:border-blue-600 focus:bg-white focus:outline-hidden transition"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowEditTeamModal(null)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-xs transition cursor-pointer"
+                >
+                  Save Changes
                 </button>
               </div>
             </form>

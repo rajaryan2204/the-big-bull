@@ -35,6 +35,7 @@ export interface StorageEngine {
   getTeamByCode(teamCode: string): Promise<TeamPublic | null>;
   createTeam(teamCode: string, name: string, accessCode: string, startingBalance?: number): Promise<TeamPublic>;
   updateTeam(id: string, updates: Partial<{ name: string; isDisabled: boolean; isActive: boolean }>): Promise<TeamPublic>;
+  deleteTeam(id: string): Promise<boolean>;
   resetTeamAccessCode(id: string, newAccessCode: string): Promise<void>;
   setTeamConnectionStatus(id: string, status: "CONNECTED" | "DISCONNECTED"): Promise<void>;
   authenticateTeam(teamCode: string, accessCode: string): Promise<{ success: boolean; team?: TeamPublic; error?: string }>;
@@ -425,6 +426,12 @@ export class DemoStore implements StorageEngine {
     this.teams.set(id, team);
     this.saveToFile();
     return this.toPublicTeam(team);
+  }
+
+  public async deleteTeam(id: string): Promise<boolean> {
+    const deleted = this.teams.delete(id);
+    if (deleted) this.saveToFile();
+    return deleted;
   }
 
   public async resetTeamAccessCode(id: string, newAccessCode: string): Promise<void> {

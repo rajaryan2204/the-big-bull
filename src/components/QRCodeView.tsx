@@ -27,13 +27,13 @@ export const QRCodeView: React.FC<QRCodeViewProps> = ({
         try {
           const res = await fetch("/api/health");
           const data = await res.json();
-          finalUrl = data.joinUrl || `${window.location.origin}/join`;
+          finalUrl = data.joinUrl || `${window.location.origin}/`;
         } catch (e) {
-          finalUrl = `${window.location.origin}/join`;
+          finalUrl = `${window.location.origin}/`;
         }
       }
 
-      const resolvedUrl = finalUrl || `${window.location.origin}/join`;
+      const resolvedUrl = finalUrl || `${window.location.origin}/`;
       setTargetUrl(resolvedUrl);
 
       try {
@@ -41,8 +41,8 @@ export const QRCodeView: React.FC<QRCodeViewProps> = ({
           width: size,
           margin: 1,
           color: {
-            dark: "#0a0a0c",
-            light: "#fbbf24", // Warm gold background
+            dark: "#1e3a8a", // Deep Royal Blue
+            light: "#ffffff", // Pure White
           },
         })) as string;
         setDataUrl(qr);
@@ -62,7 +62,7 @@ export const QRCodeView: React.FC<QRCodeViewProps> = ({
 
   return (
     <div className={`flex flex-col items-center text-center ${className}`}>
-      <div className="p-3 bg-amber-500/10 border-2 border-amber-500/30 rounded-2xl shadow-xl shadow-amber-500/10">
+      <div className="p-3 bg-white border-2 border-blue-200 rounded-2xl shadow-lg">
         {dataUrl ? (
           <img
             src={dataUrl}
@@ -72,28 +72,28 @@ export const QRCodeView: React.FC<QRCodeViewProps> = ({
           />
         ) : (
           <div
-            className="flex items-center justify-center bg-amber-500/20 rounded-xl animate-pulse"
+            className="flex items-center justify-center bg-blue-50 rounded-xl animate-pulse"
             style={{ width: size, height: size }}
           >
-            <QrCode className="w-12 h-12 text-amber-400" />
+            <QrCode className="w-12 h-12 text-blue-600" />
           </div>
         )}
       </div>
 
       {showText && (
         <div className="mt-3 flex flex-col items-center">
-          <div className="flex items-center gap-1.5 text-xs text-amber-300 font-bold uppercase tracking-wider">
+          <div className="flex items-center gap-1.5 text-xs text-blue-700 font-bold uppercase tracking-wider">
             <Smartphone className="w-3.5 h-3.5" />
             <span>Scan with Phone Camera to Join</span>
           </div>
-          <div className="mt-1 flex items-center gap-2 bg-[#121218] border border-[#232330] px-3 py-1 rounded-full text-[11px] text-neutral-300 font-mono">
-            <span className="truncate max-w-[200px]">{targetUrl}</span>
+          <div className="mt-1 flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1 rounded-full text-[11px] text-slate-700 font-mono">
+            <span className="truncate max-w-[220px]">{targetUrl}</span>
             <button
               onClick={copyUrl}
-              className="text-amber-400 hover:text-amber-300 transition"
+              className="text-blue-600 hover:text-blue-800 transition cursor-pointer"
               title="Copy URL"
             >
-              {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+              {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
             </button>
           </div>
         </div>
