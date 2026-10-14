@@ -187,6 +187,33 @@ class SoundFxManager {
       osc.stop(ctx.currentTime + 0.12);
     } catch (e) {}
   }
+
+  // 7. Multi-coin Shower & Fanfare (5,000 Coins Credited)
+  public playCoinShower() {
+    if (this.isMuted) return;
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    try {
+      const pitches = [659.25, 783.99, 987.77, 1046.5, 1318.51, 1567.98, 2093.0];
+      pitches.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.08);
+
+        gain.gain.setValueAtTime(0.2, ctx.currentTime + idx * 0.08);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.08 + 0.28);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(ctx.currentTime + idx * 0.08);
+        osc.stop(ctx.currentTime + idx * 0.08 + 0.3);
+      });
+    } catch (e) {}
+  }
 }
 
 export const soundFx = new SoundFxManager();

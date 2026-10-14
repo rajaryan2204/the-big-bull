@@ -21,6 +21,10 @@ import {
   Trophy,
   Users,
   Zap,
+  Sparkles,
+  Info,
+  X,
+  Wallet,
 } from "lucide-react";
 import {
   GameState,
@@ -31,6 +35,9 @@ import {
 } from "@/src/types";
 import { detectIncognito } from "@/src/lib/detectIncognito";
 import { IncognitoBarrier } from "@/src/components/IncognitoBarrier";
+import { BullLogo } from "@/src/components/BullLogo";
+import { CoinShowerModal } from "@/src/components/CoinShowerModal";
+import { RulesInfoModal } from "@/src/components/RulesInfoModal";
 
 export default function TeamTerminalPage() {
   const router = useRouter();
@@ -43,6 +50,13 @@ export default function TeamTerminalPage() {
   const [lockingIn, setLockingIn] = useState(false);
   const [connected, setConnected] = useState<boolean>(true);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+
+  // Terms & Conditions Agreement & Coin Crediting State
+  const [termsAgreed, setTermsAgreed] = useState<boolean>(false);
+  const [isCreditingCoins, setIsCreditingCoins] = useState<boolean>(false);
+  const [coinCounter, setCoinCounter] = useState<number>(0);
+  const [hasPreviouslyAcceptedTerms, setHasPreviouslyAcceptedTerms] = useState<boolean>(false);
+  const [showRulesInfoModal, setShowRulesInfoModal] = useState<boolean>(false);
 
   // Strict Kiosk & Fullscreen State
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
@@ -339,6 +353,48 @@ export default function TeamTerminalPage() {
     }
   };
 
+  // Check previously accepted terms on team load
+  useEffect(() => {
+    if (team?.teamCode) {
+      const accepted = sessionStorage.getItem(`bigbull_terms_accepted_${team.teamCode}`);
+      if (accepted === "true") {
+        setHasPreviouslyAcceptedTerms(true);
+        setTermsAgreed(true);
+      }
+    }
+  }, [team?.teamCode]);
+
+  // Handle Claiming 5,000 Coins with Animation & Fanfare
+  const handleClaimCoinsAndEnter = () => {
+    if (!termsAgreed) return;
+    setIsCreditingCoins(true);
+    soundFx.playCoinShower();
+
+    const startTime = Date.now();
+    const duration = 2200;
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(1, elapsed / duration);
+      // easeOutExpo
+      const easeOut = progress === 1 ? 1 : 1 - Math.pow(2, -10 * progress);
+      const current = Math.floor(easeOut * 5000);
+      setCoinCounter(current);
+
+      if (progress >= 1) {
+        clearInterval(interval);
+        setCoinCounter(5000);
+        if (team?.teamCode) {
+          sessionStorage.setItem(`bigbull_terms_accepted_${team.teamCode}`, "true");
+        }
+        setHasPreviouslyAcceptedTerms(true);
+        setTimeout(async () => {
+          setIsCreditingCoins(false);
+          await enterFullscreen();
+        }, 700);
+      }
+    }, 30);
+  };
+
   // Submit Answer
   const submitAnswer = async (option: string) => {
     if (!gameState?.currentQuestion || lockingIn) return;
@@ -463,20 +519,239 @@ export default function TeamTerminalPage() {
   }
 
   // ==========================================
-  // VIEW 1: GATEWAY (MANDATORY FULLSCREEN LOCK)
+  // VIEW 1: GATEWAY (TERMS & PROTOCOL OR FULLSCREEN RE-ENTRY)
   // ==========================================
   if (!hasEnteredTerminal) {
+    if (!hasPreviouslyAcceptedTerms) {
+      return (
+        <div
+          className="min-h-[100dvh] bg-slate-50 text-slate-900 flex flex-col justify-between p-3 sm:p-5 select-none font-sans relative"
+          onContextMenu={(e) => e.preventDefault()}
+        >
+          {isCreditingCoins && (
+            <CoinShowerModal
+              teamName={team?.name || "Your Squad"}
+              teamCode={team?.teamCode}
+              counter={coinCounter}
+            />
+          )}
+
+          {/* Top Header */}
+          <div className="flex items-center justify-between border-b border-slate-200 pb-3 max-w-lg mx-auto w-full">
+            <div className="flex items-center gap-2">
+              <BullLogo size="sm" showText={true} />
+            </div>
+            <div className="flex items-center gap-2">
+              {requireIncognito && isIncognito && (
+                <span className="px-2 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[10px] font-bold flex items-center gap-1">
+                  <Shield className="w-3 h-3 text-blue-600" />
+                  Incognito Verified
+                </span>
+              )}
+              <span className="font-mono text-xs font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md border border-slate-200">
+                {team?.teamCode}
+              </span>
+            </div>
+          </div>
+
+          {/* Main Terms & Lifelines Protocols Form */}
+          <main className="max-w-lg mx-auto w-full my-auto py-3 space-y-3 sm:space-y-4">
+            {/* Page Header */}
+            <div className="text-center space-y-1">
+              <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-[10px] font-bold uppercase tracking-wider">
+                <Sparkles className="w-3 h-3 text-blue-600" />
+                <span>Rules of Engagement & Lifelines Protocol</span>
+              </div>
+              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 uppercase">
+                Competition Guidelines
+              </h1>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                Read the terms below to unlock your <strong className="text-blue-700">5,000 Coins</strong> starting capital and enter the live terminal.
+              </p>
+            </div>
+
+            {/* Scrollable Terms & Lifelines Content Box */}
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-white border border-slate-200 shadow-sm max-h-[52vh] sm:max-h-[56vh] overflow-y-auto space-y-3.5 text-xs">
+              {/* 5,000 Coins Initial Grant Box */}
+              <div className="p-3 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 flex items-start gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <Wallet className="w-4 h-4 text-yellow-300" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5 font-bold text-slate-900 text-xs sm:text-sm">
+                    <span>5,000 Coins Starting Capital</span>
+                    <span className="text-[10px] bg-blue-600 text-white px-1.5 py-0.2 rounded-full font-bold">
+                      Team Grant
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">
+                    Every squad is allocated <strong>5,000 Coins</strong> for tactical lifelines. Coins do not convert to points, but running out leaves you without assistance in decisive rounds.
+                  </p>
+                </div>
+              </div>
+
+              {/* 4 Lifelines Breakdown */}
+              <div className="space-y-1.5">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
+                  <Coins className="w-3.5 h-3.5 text-blue-600" />
+                  <span>The 4 Tactical Lifelines & Pricing</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {/* Hint */}
+                  <div className="p-2.5 rounded-xl border border-slate-200 bg-slate-50/60 hover:border-blue-200 transition">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-bold text-slate-900 text-[11px] flex items-center gap-1">
+                        <Lightbulb className="w-3.5 h-3.5 text-amber-500" />
+                        <span>Bull&apos;s Hint</span>
+                      </span>
+                      <span className="font-mono font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded text-[10px]">
+                        500 C
+                      </span>
+                    </div>
+                    <p className="text-[10.5px] text-slate-600 leading-snug">
+                      Unlocks an insider conceptual clue from the host pointing you toward the core formula or logic.
+                    </p>
+                  </div>
+
+                  {/* Vision Boost */}
+                  <div className="p-2.5 rounded-xl border border-slate-200 bg-slate-50/60 hover:border-blue-200 transition">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-bold text-slate-900 text-[11px] flex items-center gap-1">
+                        <Eye className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Vision Boost</span>
+                      </span>
+                      <span className="font-mono font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded text-[10px]">
+                        1,500 C
+                      </span>
+                    </div>
+                    <p className="text-[10.5px] text-slate-600 leading-snug">
+                      Displays the question&apos;s chart, candlestick diagram, or financial infographic on your mobile screen.
+                    </p>
+                  </div>
+
+                  {/* 50:50 */}
+                  <div className="p-2.5 rounded-xl border border-slate-200 bg-slate-50/60 hover:border-blue-200 transition">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-bold text-slate-900 text-[11px] flex items-center gap-1">
+                        <Zap className="w-3.5 h-3.5 text-amber-500" />
+                        <span>50:50 Blast</span>
+                      </span>
+                      <span className="font-mono font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded text-[10px]">
+                        2,000 C
+                      </span>
+                    </div>
+                    <p className="text-[10.5px] text-slate-600 leading-snug">
+                      Eliminates 2 wrong choices from your terminal, raising your probability of winning to 50%.
+                    </p>
+                  </div>
+
+                  {/* Pass */}
+                  <div className="p-2.5 rounded-xl border border-slate-200 bg-slate-50/60 hover:border-blue-200 transition">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-bold text-slate-900 text-[11px] flex items-center gap-1">
+                        <FastForward className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Bull&apos;s Pass</span>
+                      </span>
+                      <span className="font-mono font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded text-[10px]">
+                        2,500 C
+                      </span>
+                    </div>
+                    <p className="text-[10.5px] text-slate-600 leading-snug">
+                      Safely skips the question with zero penalty and zero negative marking to protect your score.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Synchronized Clock & Rules */}
+              <div className="space-y-1 pt-1.5 border-t border-slate-100 text-[11px]">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Clock & Scoring Rules</span>
+                </div>
+                <ul className="list-disc list-inside text-slate-600 space-y-0.5 pl-1">
+                  <li><strong>5-Minute Live Clock:</strong> Rounds last 5 minutes synchronized across board and devices.</li>
+                  <li><strong>One-Lock Rule:</strong> Once an answer or pass is locked, it cannot be edited or retracted.</li>
+                  <li><strong>Leaderboard Ranking:</strong> Points are awarded for accuracy; speed breaks ties.</li>
+                </ul>
+              </div>
+
+              {/* 3-Strike Rule */}
+              <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-left space-y-1 text-xs">
+                <div className="flex items-center gap-1.5 font-bold text-red-700 uppercase tracking-wider text-[11px]">
+                  <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                  <span>Strict Anti-Cheat & 3-Strike Disqualification</span>
+                </div>
+                <p className="text-slate-700 text-[11px] leading-relaxed">
+                  Minimizing the browser, exiting fullscreen, or switching tabs logs an immediate Strike. <strong className="text-red-700 font-bold">Strike 3 = Permanent Disqualification</strong>.
+                </p>
+              </div>
+            </div>
+
+            {/* Checkbox Agreement */}
+            <div
+              onClick={() => setTermsAgreed(!termsAgreed)}
+              className={`p-3 rounded-xl border transition cursor-pointer flex items-start gap-2.5 ${
+                termsAgreed
+                  ? "bg-blue-50/80 border-blue-400 text-blue-950"
+                  : "bg-white border-slate-200 text-slate-700 hover:border-slate-300"
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={termsAgreed}
+                onChange={(e) => setTermsAgreed(e.target.checked)}
+                className="mt-0.5 w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
+                onClick={(e) => e.stopPropagation()}
+              />
+              <label className="text-[11.5px] font-semibold leading-relaxed cursor-pointer select-none">
+                I have read, understood, and agreed to all Competition Rules, Security Protocols, and Lifeline Guidelines. Our team is ready to compete.
+              </label>
+            </div>
+
+            {/* Claim 5,000 Coins Button */}
+            <button
+              disabled={!termsAgreed}
+              onClick={handleClaimCoinsAndEnter}
+              className={`w-full py-3.5 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer min-h-[48px] ${
+                termsAgreed
+                  ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md shadow-blue-500/25 active:scale-[0.99]"
+                  : "bg-slate-200 text-slate-400 cursor-not-allowed"
+              }`}
+            >
+              <Sparkles
+                className={`w-4 h-4 ${termsAgreed ? "text-yellow-300 animate-spin" : "text-slate-400"}`}
+                style={{ animationDuration: "3s" }}
+              />
+              <span>{termsAgreed ? "Agree & Claim 5,000 Coins Capital" : "Tick Agreement to Claim 5,000 Coins"}</span>
+            </button>
+          </main>
+
+          <footer className="text-center text-[10px] text-slate-400 max-w-lg mx-auto w-full pt-1">
+            The Big Bull • Secure Arena Protocol
+          </footer>
+        </div>
+      );
+    }
+
+    // Previously accepted terms re-entry
     return (
       <div
-        className="min-h-[100dvh] bg-slate-50 text-slate-900 flex flex-col justify-between p-4 sm:p-6 select-none font-sans"
+        className="min-h-[100dvh] bg-slate-50 text-slate-900 flex flex-col justify-between p-4 sm:p-6 select-none font-sans relative"
         onContextMenu={(e) => e.preventDefault()}
       >
+        {isCreditingCoins && (
+          <CoinShowerModal
+            teamName={team?.name || "Your Squad"}
+            teamCode={team?.teamCode}
+            counter={coinCounter}
+          />
+        )}
+
         <div className="flex items-center justify-between border-b border-slate-200 pb-3 max-w-md mx-auto w-full">
           <div className="flex items-center gap-2">
-            <div className="w-2.5 h-2.5 bg-blue-600 rounded-sm" />
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-900">
-              THE BIG BULL
-            </span>
+            <BullLogo size="sm" showText={true} />
           </div>
           <div className="flex items-center gap-2">
             {requireIncognito && isIncognito && (
@@ -520,13 +795,22 @@ export default function TeamTerminalPage() {
             </ul>
           </div>
 
-          <button
-            onClick={enterFullscreen}
-            className="w-full py-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold text-sm tracking-wide shadow-sm shadow-blue-500/20 transition flex items-center justify-center gap-2 cursor-pointer min-h-[50px]"
-          >
-            <Maximize2 className="w-4 h-4" />
-            <span>Enter Fullscreen Terminal</span>
-          </button>
+          <div className="space-y-2">
+            <button
+              onClick={enterFullscreen}
+              className="w-full py-4 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold text-sm tracking-wide shadow-sm shadow-blue-500/20 transition flex items-center justify-center gap-2 cursor-pointer min-h-[50px]"
+            >
+              <Maximize2 className="w-4 h-4" />
+              <span>Enter Fullscreen Terminal</span>
+            </button>
+
+            <button
+              onClick={() => setHasPreviouslyAcceptedTerms(false)}
+              className="w-full py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 font-semibold text-xs transition cursor-pointer"
+            >
+              Review Rules & Lifelines Guide
+            </button>
+          </div>
         </main>
 
         <footer className="text-center text-[11px] text-slate-400 max-w-md mx-auto w-full pt-3">
@@ -547,6 +831,10 @@ export default function TeamTerminalPage() {
       onCut={(e) => e.preventDefault()}
       onPaste={(e) => e.preventDefault()}
     >
+      {showRulesInfoModal && (
+        <RulesInfoModal onClose={() => setShowRulesInfoModal(false)} />
+      )}
+
       {/* LOCKDOWN OVERLAY (SUSPENDED ON STRIKE) */}
       {lockdownActive && !isDisqualified && (
         <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-md flex flex-col items-center justify-center p-4 sm:p-6 text-center animate-in fade-in duration-200">
@@ -669,6 +957,15 @@ export default function TeamTerminalPage() {
             <Coins className="w-3.5 h-3.5 text-blue-600" />
             <span>{(team?.currentBalance ?? 5000).toLocaleString()}</span>
           </div>
+
+          {/* Info Modal Button */}
+          <button
+            onClick={() => setShowRulesInfoModal(true)}
+            className="p-1 rounded-md border border-slate-200 bg-slate-50 text-slate-500 hover:text-blue-600 hover:bg-blue-50 transition cursor-pointer"
+            title="View Rules & Lifelines Guide"
+          >
+            <Info className="w-3.5 h-3.5" />
+          </button>
 
           <button
             onClick={handleLogout}

@@ -67,3 +67,41 @@
   border-color: #93c5fd;
   box-shadow: 0 4px 12px -2px rgba(37, 99, 235, 0.08);
 }
+
+/* Coin Crediting Keyframes */
+@keyframes coinShower {
+  0% {
+    opacity: 0;
+    transform: translateY(-60px) rotate(0deg) scale(0.6);
+  }
+  20% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+    transform: translateY(160px) rotate(360deg) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(200px) rotate(720deg) scale(0.4);
+  }
+}
+
+@keyframes walletGlow {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 20px rgba(37, 99, 235, 0.2);
+  }
+  50% {
+    transform: scale(1.08);
+    box-shadow: 0 0 45px rgba(234, 179, 8, 0.6);
+  }
+}
+
+.animate-coin-drop {
+  animation: coinShower 1.8s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+}
+
+.animate-wallet-pulse {
+  animation: walletGlow 1s ease-in-out infinite;
+}
