@@ -12,7 +12,7 @@ interface CountdownTimerProps {
 
 export const CountdownTimer: React.FC<CountdownTimerProps> = ({
   remainingSeconds,
-  totalSeconds = 240,
+  totalSeconds = 120,
   isPaused = false,
   size = "md",
   className = "",

@@ -867,7 +867,7 @@ export class DemoStore implements StorageEngine {
         hintText: r.hintText || null,
         explanation: r.explanation || null,
         difficulty: (r.difficulty?.toUpperCase() as any) || "MEDIUM",
-        durationSeconds: Number(r.durationSeconds) || 240,
+        durationSeconds: Number(r.durationSeconds) || 120,
         isActive: true,
         createdAt: now,
         updatedAt: now,
@@ -916,7 +916,7 @@ export class DemoStore implements StorageEngine {
       correctReward: options?.correctReward ?? 1000,
       incorrectPenalty: options?.incorrectPenalty ?? 200,
       unansweredPenalty: options?.unansweredPenalty ?? 0,
-      defaultQuestionDuration: options?.defaultQuestionDuration ?? 240,
+      defaultQuestionDuration: options?.defaultQuestionDuration ?? 120,
       oneActiveSessionPerTeam: options?.oneActiveSessionPerTeam ?? true,
       examMode: options?.examMode ?? false,
       requireIncognito: options?.requireIncognito ?? true,
@@ -1766,6 +1766,9 @@ let storageInstance: StorageEngine | null = null;
 let prismaClientInstance: PrismaClient | null = null;
 
 export function getPrismaClient(): PrismaClient | null {
+  if (process.env.NODE_ENV === "test" && !process.env.TEST_WITH_DB) {
+    return null;
+  }
   if (prismaClientInstance) return prismaClientInstance;
   const dbUrl = process.env.DATABASE_URL;
   if (!dbUrl) return null;

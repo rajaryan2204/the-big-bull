@@ -45,7 +45,7 @@ export default function TeamTerminalPage() {
   const [team, setTeam] = useState<TeamPublic | null>(null);
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [privateState, setPrivateState] = useState<TeamPrivateState | null>(null);
-  const [remainingSeconds, setRemainingSeconds] = useState<number>(240);
+  const [remainingSeconds, setRemainingSeconds] = useState<number>(120);
   const [isPaused, setIsPaused] = useState<boolean>(false);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [lockingIn, setLockingIn] = useState(false);
@@ -465,7 +465,7 @@ export default function TeamTerminalPage() {
     setConfirmModal(null);
     soundFx.playLockSound();
 
-    const timeTaken = Math.max(0, (gameState.currentQuestion.durationSeconds || 240) - remainingSeconds);
+    const timeTaken = Math.max(0, (gameState.currentQuestion.durationSeconds || 120) - remainingSeconds);
 
     let socketSuccess = false;
     if (socketRef.current && socketRef.current.connected) {

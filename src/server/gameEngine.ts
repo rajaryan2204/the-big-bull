@@ -107,7 +107,7 @@ export class GameEngine {
       throw new Error(`Question at index ${orderIndex} not found`);
     }
 
-    const durationSeconds = gq.durationSeconds || game.defaultQuestionDuration || 240;
+    const durationSeconds = gq.durationSeconds || game.defaultQuestionDuration || 120;
     const openedAt = new Date().toISOString();
     const deadline = new Date(Date.now() + durationSeconds * 1000).toISOString();
 

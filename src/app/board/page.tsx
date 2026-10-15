@@ -28,7 +28,7 @@ import { EventCountdown } from "@/src/components/EventCountdown";
 export default function SmartBoardPage() {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [remainingSeconds, setRemainingSeconds] = useState<number>(240);
+  const [remainingSeconds, setRemainingSeconds] = useState<number>(120);
   const [isPaused, setIsPaused] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [answerCount, setAnswerCount] = useState<{ answeredCount: number; totalCount: number }>({
@@ -52,7 +52,7 @@ export default function SmartBoardPage() {
   const autoAdvanceTriggeredRef = useRef<boolean>(false);
 
   const prevStatusRef = useRef<string>("LOBBY");
-  const prevSecondRef = useRef<number>(240);
+  const prevSecondRef = useRef<number>(120);
   const socketRef = useRef<any>(null);
 
   // Check saved host token on initial mount
