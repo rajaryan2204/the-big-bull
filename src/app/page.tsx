@@ -9,11 +9,13 @@ import {
   Shield,
   Monitor,
   Lock,
+  FileText,
 } from "lucide-react";
 import { BullLogo } from "@/src/components/BullLogo";
 import { EventCountdown } from "@/src/components/EventCountdown";
 import { detectIncognito } from "@/src/lib/detectIncognito";
 import { IncognitoBarrier } from "@/src/components/IncognitoBarrier";
+import { TournamentRulesModal } from "@/src/components/TournamentRulesModal";
 
 export default function StudentParticipantPortal() {
   const router = useRouter();
@@ -29,16 +31,7 @@ export default function StudentParticipantPortal() {
   const [requireIncognito, setRequireIncognito] = useState<boolean>(true);
   const [checkingIncognito, setCheckingIncognito] = useState<boolean>(true);
 
-  const demoTeams = [
-    { code: "BULLS-101", name: "Apex Predators" },
-    { code: "BULLS-102", name: "Wall Street Wolves" },
-    { code: "BULLS-103", name: "Quantum Bulls" },
-    { code: "BULLS-104", name: "Silicon Mavericks" },
-    { code: "BULLS-105", name: "Galactic Capital" },
-    { code: "BULLS-106", name: "Cyber Strikers" },
-    { code: "BULLS-107", name: "Alpha Centauri" },
-    { code: "BULLS-108", name: "Golden Horns" },
-  ];
+  const [showRulesModal, setShowRulesModal] = useState(false);
 
   const checkIncognitoStatus = useCallback(async () => {
     setCheckingIncognito(true);
@@ -105,12 +98,6 @@ export default function StudentParticipantPortal() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const quickSelect = (code: string) => {
-    setTeamCode(code);
-    setAccessCode(code);
-    setError(null);
   };
 
   // Block normal browsing if Incognito is required
@@ -202,7 +189,7 @@ export default function StudentParticipantPortal() {
               </label>
               <input
                 type="text"
-                placeholder="e.g. BULLS-101"
+                placeholder="e.g. UVB74M58"
                 value={teamCode}
                 onChange={(e) => setTeamCode(e.target.value.toUpperCase())}
                 className="w-full px-3.5 py-3 rounded-xl bg-slate-50 border border-slate-300 text-slate-900 font-mono text-base focus:bg-white focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition outline-none"
@@ -242,35 +229,25 @@ export default function StudentParticipantPortal() {
             </button>
           </form>
 
-          {/* 1-Tap Squad Autofill for Quick Demo Access */}
-          <div className="pt-2 border-t border-slate-100 space-y-2">
-            <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500">
-              <span>Quick Squads (1-Tap Fill)</span>
-              <span className="text-blue-600 font-bold">5,000 Coins</span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              {demoTeams.map((t) => (
-                <button
-                  key={t.code}
-                  type="button"
-                  onClick={() => quickSelect(t.code)}
-                  className={`p-2.5 rounded-xl text-left border transition text-xs font-medium flex items-center justify-between active:scale-[0.98] ${
-                    teamCode === t.code
-                      ? "bg-blue-50 border-blue-500 text-blue-900 font-bold shadow-xs"
-                      : "bg-slate-50/70 border-slate-200/80 text-slate-700 hover:bg-blue-50/40 hover:border-blue-300"
-                  }`}
-                >
-                  <span className="truncate font-mono">{t.code}</span>
-                  {teamCode === t.code && (
-                    <CheckCircle2 className="w-3.5 h-3.5 text-blue-600 shrink-0 ml-1" />
-                  )}
-                </button>
-              ))}
-            </div>
+          {/* Official Tournament Rules & Terms */}
+          <div className="pt-3 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={() => setShowRulesModal(true)}
+              className="w-full py-2.5 px-3 rounded-xl border border-blue-200 bg-blue-50/70 hover:bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer active:scale-[0.99]"
+            >
+              <FileText className="w-4 h-4 text-blue-600 shrink-0" />
+              <span>Official Rules, Scoring Matrix & T&C</span>
+            </button>
           </div>
         </div>
       </main>
+
+      {/* Rules & Terms Modal */}
+      <TournamentRulesModal
+        isOpen={showRulesModal}
+        onClose={() => setShowRulesModal(false)}
+      />
 
       {/* Footer with Discreet Portal Links for Hosts */}
       <footer className="text-center text-[11px] text-slate-500 max-w-md mx-auto w-full pt-3 space-y-2">

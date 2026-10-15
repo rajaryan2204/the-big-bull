@@ -6,7 +6,21 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   try {
     const storage = await getStorage();
-    const game = await storage.getCurrentGame();
+    let game = await storage.getCurrentGame();
+
+    // Authoritative Server-side Deadline Expiration (Syncs Smartboard & Phone when 2 minutes elapse)
+    if (
+      game.status === "QUESTION_ACTIVE" &&
+      game.currentQuestion?.deadline &&
+      Date.now() >= new Date(game.currentQuestion.deadline).getTime()
+    ) {
+      try {
+        const { getGameEngine } = await import("@/src/server/gameEngine");
+        await getGameEngine().closeCurrentQuestion("DEADLINE_REACHED");
+        game = await storage.getCurrentGame();
+      } catch (e) {}
+    }
+
     const leaderboard = await storage.getLeaderboard();
     const teams = await storage.getAllTeams();
 

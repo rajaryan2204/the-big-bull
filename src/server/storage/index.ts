@@ -1852,17 +1852,43 @@ export class DemoStore implements StorageEngine {
     await this.getAllTeams();
     const teams = Array.from(this.teams.values());
 
-    // Count lifelines per team
+    // Count lifelines per team (both from memory and PostgreSQL)
     const lifelineCountMap = new Map<string, number>();
     for (const l of this.lifelines.values()) {
       lifelineCountMap.set(l.teamId, (lifelineCountMap.get(l.teamId) || 0) + 1);
     }
 
-    // Sort primarily by score (desc), then coins remaining (desc), then correct answers (desc)
+    const prisma = getPrismaClient();
+    if (prisma) {
+      try {
+        const dbCounts = await prisma.lifelinePurchase.groupBy({
+          by: ["teamId"],
+          _count: { id: true },
+        });
+        if (dbCounts && dbCounts.length > 0) {
+          dbCounts.forEach((c: any) => {
+            lifelineCountMap.set(c.teamId, Math.max(lifelineCountMap.get(c.teamId) || 0, c._count.id));
+          });
+        }
+      } catch (e) {}
+    }
+
+    // Authoritative Tie-Breaker Protocol:
+    // Factor 1: Highest Total Score (descending)
+    // Factor 2: Most Correct Answers (descending)
+    // Factor 3: Fewest Lifelines Used (ASCENDING: relying least on lifelines wins tie)
+    // Factor 4: Highest Remaining Coin Balance (descending)
+    // Factor 5: Fewest Attempted Questions (penalty mitigation)
     const sorted = [...teams].sort((a, b) => {
       if (b.score !== a.score) return b.score - a.score;
+      if (b.correctAnswers !== a.correctAnswers) return b.correctAnswers - a.correctAnswers;
+
+      const aLifelines = lifelineCountMap.get(a.id) || 0;
+      const bLifelines = lifelineCountMap.get(b.id) || 0;
+      if (aLifelines !== bLifelines) return aLifelines - bLifelines; // Lower = better!
+
       if (b.currentBalance !== a.currentBalance) return b.currentBalance - a.currentBalance;
-      return b.correctAnswers - a.correctAnswers;
+      return a.attemptedQuestions - b.attemptedQuestions;
     });
 
     return sorted.map((t, idx) => ({

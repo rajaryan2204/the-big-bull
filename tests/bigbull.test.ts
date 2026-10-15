@@ -11,14 +11,24 @@ describe("THE BIG BULL - Comprehensive Game Rules & Security Tests", () => {
     await store.initialize();
     // Fresh game
     await store.createOrResetGame();
-    // Reset test teams
-    for (const code of ["BULLS-101", "BULLS-102", "BULLS-103", "BULLS-104"]) {
-      const t = await store.getTeamByCode(code);
-      if (t) {
-        await store.resetTeamStrikes(t.id);
-        if (t.currentBalance !== 5000) {
-          await store.adjustCoins(t.id, 5000 - t.currentBalance, "ADMIN_CREDIT");
-        }
+    // Ensure isolated test teams exist and are clean
+    for (const code of [
+      "BULLS-101",
+      "BULLS-102",
+      "BULLS-103",
+      "BULLS-104",
+      "BULLS-105",
+      "BULLS-106",
+      "BULLS-107",
+      "BULLS-108",
+    ]) {
+      let t = await store.getTeamByCode(code);
+      if (!t) {
+        t = await store.createTeam(code, `Test ${code}`, code, 5000, ["Test User"]);
+      }
+      await store.resetTeamStrikes(t.id);
+      if (t.currentBalance !== 5000) {
+        await store.adjustCoins(t.id, 5000 - t.currentBalance, "ADMIN_CREDIT");
       }
     }
   });

@@ -25,6 +25,7 @@ import {
   Info,
   X,
   Wallet,
+  FileText,
 } from "lucide-react";
 import {
   GameState,
@@ -37,7 +38,7 @@ import { detectIncognito } from "@/src/lib/detectIncognito";
 import { IncognitoBarrier } from "@/src/components/IncognitoBarrier";
 import { BullLogo } from "@/src/components/BullLogo";
 import { CoinShowerModal } from "@/src/components/CoinShowerModal";
-import { RulesInfoModal } from "@/src/components/RulesInfoModal";
+import { TournamentRulesModal } from "@/src/components/TournamentRulesModal";
 import { EventCountdown } from "@/src/components/EventCountdown";
 
 export default function TeamTerminalPage() {
@@ -1025,7 +1026,10 @@ export default function TeamTerminalPage() {
       onPaste={(e) => e.preventDefault()}
     >
       {showRulesInfoModal && (
-        <RulesInfoModal onClose={() => setShowRulesInfoModal(false)} />
+        <TournamentRulesModal
+          isOpen={showRulesInfoModal}
+          onClose={() => setShowRulesInfoModal(false)}
+        />
       )}
 
       {/* LOCKDOWN OVERLAY (SUSPENDED ON STRIKE) */}
@@ -1218,6 +1222,17 @@ export default function TeamTerminalPage() {
                 </div>
               </div>
             )}
+
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => setShowRulesInfoModal(true)}
+                className="w-full py-2.5 px-3 rounded-xl border border-blue-200 bg-blue-50/70 hover:bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center gap-2 transition cursor-pointer active:scale-[0.99]"
+              >
+                <FileText className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                <span>📜 Tournament Rules, Scoring Matrix & T&C</span>
+              </button>
+            </div>
           </div>
         )}
 
@@ -1361,7 +1376,7 @@ export default function TeamTerminalPage() {
                     <button
                       key={opt.key}
                       type="button"
-                      disabled={isEliminated || !!lockedAnswer || gameStatus !== "QUESTION_ACTIVE"}
+                      disabled={isEliminated || !!lockedAnswer || gameStatus !== "QUESTION_ACTIVE" || remainingSeconds <= 0}
                       onClick={() => setSelectedOption(opt.key)}
                       className={`py-2 px-3 rounded-xl border text-left transition flex items-center justify-between text-xs font-sans min-h-[38px] active:scale-[0.99] cursor-pointer ${style}`}
                     >
@@ -1430,7 +1445,7 @@ export default function TeamTerminalPage() {
               </div>
 
               {/* Lock Button or Locked Confirmation Banner */}
-              {!lockedAnswer && gameStatus === "QUESTION_ACTIVE" && (
+              {!lockedAnswer && gameStatus === "QUESTION_ACTIVE" && remainingSeconds > 0 && (
                 <button
                   type="button"
                   disabled={!selectedOption || lockingIn}
@@ -1440,6 +1455,14 @@ export default function TeamTerminalPage() {
                   <Lock className="w-3.5 h-3.5" />
                   <span>{selectedOption ? `Lock Answer [${selectedOption}]` : "Select an Option to Lock"}</span>
                 </button>
+              )}
+
+              {/* Round Time Expired Banner */}
+              {!lockedAnswer && (gameStatus === "QUESTION_CLOSED" || (gameStatus === "QUESTION_ACTIVE" && remainingSeconds <= 0)) && (
+                <div className="py-2.5 px-3 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs font-bold flex items-center justify-center gap-2 text-center shrink-0 animate-in fade-in">
+                  <Clock className="w-4 h-4 text-amber-600 shrink-0 animate-pulse" />
+                  <span>⏱️ Round Time Expired (120s) • Question Closed • Stand By</span>
+                </div>
               )}
 
               {/* Immediate Verdict Banner */}

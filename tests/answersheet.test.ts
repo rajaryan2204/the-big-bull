@@ -7,6 +7,10 @@ describe("THE BIG BULL - Immediate Feedback & Answer Sheet Verification", () => 
   beforeEach(async () => {
     store = new DemoStore();
     await store.initialize();
+    let team = await store.getTeamByCode("BULLS-101");
+    if (!team) {
+      await store.createTeam("BULLS-101", "Apex Predators", "BULLS-101", 5000, ["Aarav"]);
+    }
   });
 
   it("should evaluate answer immediately on submission and return correctness cues", async () => {
