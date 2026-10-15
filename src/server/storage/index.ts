@@ -268,6 +268,9 @@ export class DemoStore implements StorageEngine {
 
       // Check if an existing game is saved in PostgreSQL
       const dbGame = await prisma.game.findFirst({
+        where: {
+          gameQuestions: { some: {} },
+        },
         orderBy: { createdAt: "desc" },
         include: {
           gameQuestions: {
@@ -468,7 +471,7 @@ export class DemoStore implements StorageEngine {
       try {
         const dbTeam = await prisma.team.findUnique({ where: { id } });
         if (dbTeam) {
-          const merged = { ...dbTeam, ...(mem || {}) };
+          const merged = { ...(mem || {}), ...dbTeam };
           this.teams.set(id, merged);
           return this.toPublicTeam(merged);
         }
@@ -481,6 +484,16 @@ export class DemoStore implements StorageEngine {
     const code = teamCode.trim().toUpperCase();
     for (const t of this.teams.values()) {
       if (t.teamCode.toUpperCase() === code) return this.toPublicTeam(t);
+    }
+    const prisma = getPrismaClient();
+    if (prisma) {
+      try {
+        const dbTeam = await prisma.team.findUnique({ where: { teamCode: code } });
+        if (dbTeam) {
+          this.teams.set(dbTeam.id, dbTeam);
+          return this.toPublicTeam(dbTeam);
+        }
+      } catch {}
     }
     return null;
   }
@@ -889,6 +902,83 @@ export class DemoStore implements StorageEngine {
 
   // --- Game ---
   public async getCurrentGame(): Promise<GameState> {
+    const prisma = getPrismaClient();
+    if (prisma) {
+      try {
+        const dbGame = await prisma.game.findFirst({
+          where: {
+            gameQuestions: { some: {} },
+          },
+          orderBy: { createdAt: "desc" },
+          include: {
+            gameQuestions: {
+              orderBy: { orderIndex: "asc" },
+            },
+          },
+        });
+        if (dbGame) {
+          if (!this.game) {
+            this.game = {
+              id: dbGame.id,
+              title: dbGame.title,
+              status: dbGame.status as any,
+              currentQuestionIndex: dbGame.currentQuestionIndex,
+              totalQuestions: dbGame.gameQuestions?.length || 40,
+              correctReward: dbGame.correctReward,
+              incorrectPenalty: dbGame.incorrectPenalty,
+              unansweredPenalty: dbGame.unansweredPenalty,
+              defaultQuestionDuration: dbGame.defaultQuestionDuration,
+              oneActiveSessionPerTeam: dbGame.oneActiveSessionPerTeam,
+              examMode: dbGame.examMode,
+              requireIncognito: (dbGame as any).requireIncognito ?? true,
+              allowAnswerChange: dbGame.allowAnswerChange,
+              allowRepeatLifelines: dbGame.allowRepeatLifelines,
+              publicLeaderboardColumns: dbGame.publicLeaderboardColumns,
+              totalAnswersReceived: 0,
+              totalTeamsCount: this.teams.size,
+              connectedTeamsCount: 0,
+              isDemoMode: false,
+            };
+          } else {
+            this.game.status = dbGame.status as any;
+            this.game.currentQuestionIndex = dbGame.currentQuestionIndex;
+            if ((dbGame as any).requireIncognito !== undefined) {
+              this.game.requireIncognito = (dbGame as any).requireIncognito;
+            }
+          }
+
+          if (dbGame.gameQuestions) {
+            for (const gq of dbGame.gameQuestions) {
+              const existing = this.gameQuestions.get(gq.id);
+              if (existing) {
+                existing.status = gq.status;
+                existing.openedAt = gq.openedAt ? gq.openedAt.toISOString() : null;
+                existing.deadline = gq.deadline ? gq.deadline.toISOString() : null;
+                existing.closedAt = gq.closedAt ? gq.closedAt.toISOString() : null;
+                existing.remainingOnPause = gq.remainingOnPause;
+              } else {
+                this.gameQuestions.set(gq.id, {
+                  id: gq.id,
+                  gameId: gq.gameId,
+                  questionId: gq.questionId,
+                  orderIndex: gq.orderIndex,
+                  durationSeconds: gq.durationSeconds,
+                  status: gq.status,
+                  openedAt: gq.openedAt ? gq.openedAt.toISOString() : null,
+                  deadline: gq.deadline ? gq.deadline.toISOString() : null,
+                  closedAt: gq.closedAt ? gq.closedAt.toISOString() : null,
+                  remainingOnPause: gq.remainingOnPause,
+                  question: this.questions.get(gq.questionId),
+                });
+              }
+            }
+          }
+        }
+      } catch (e: any) {
+        console.warn("Prisma getCurrentGame sync notice:", e.message);
+      }
+    }
+
     if (!this.game) {
       await this.createOrResetGame();
     }
@@ -896,7 +986,7 @@ export class DemoStore implements StorageEngine {
   }
 
   public async createOrResetGame(options?: Partial<GameState>): Promise<GameState> {
-    const gameId = `game-${Date.now()}`;
+    const gameId = options?.id || this.game?.id || "bigbull-championship-2026";
     const questionList = Array.from(this.questions.values()).filter((q) => q.isActive);
 
     this.gameQuestions.clear();
@@ -1063,6 +1153,30 @@ export class DemoStore implements StorageEngine {
 
   // --- Answers & Scoring ---
   public async getAnswersForQuestion(gameQuestionId: string): Promise<TeamAnswerRecord[]> {
+    const prisma = getPrismaClient();
+    if (prisma) {
+      try {
+        const dbAnswers = await prisma.teamAnswer.findMany({
+          where: { gameQuestionId },
+        });
+        if (dbAnswers && dbAnswers.length > 0) {
+          dbAnswers.forEach((a: any) => {
+            this.answers.set(`${a.gameQuestionId}_${a.teamId}`, {
+              id: a.id,
+              teamId: a.teamId,
+              selectedOption: a.selectedOption,
+              isCorrect: a.isCorrect,
+              isLocked: a.isLocked,
+              pointsAwarded: a.pointsAwarded,
+              timeTakenSeconds: a.timeTakenSeconds,
+              submittedAt: a.submittedAt.toISOString(),
+              gameQuestionId: a.gameQuestionId,
+            });
+          });
+        }
+      } catch (e) {}
+    }
+
     const results: TeamAnswerRecord[] = [];
     for (const ans of this.answers.values()) {
       if ((ans as any).gameQuestionId === gameQuestionId) {
@@ -1073,7 +1187,34 @@ export class DemoStore implements StorageEngine {
   }
 
   public async getTeamAnswer(gameQuestionId: string, teamId: string): Promise<TeamAnswerRecord | null> {
-    const ans = this.answers.get(`${gameQuestionId}_${teamId}`);
+    let ans = this.answers.get(`${gameQuestionId}_${teamId}`);
+    if (!ans) {
+      const prisma = getPrismaClient();
+      if (prisma) {
+        try {
+          const dbAns = await prisma.teamAnswer.findUnique({
+            where: {
+              gameQuestionId_teamId: { gameQuestionId, teamId },
+            },
+          });
+          if (dbAns) {
+            ans = {
+              id: dbAns.id,
+              teamId: dbAns.teamId,
+              selectedOption: dbAns.selectedOption,
+              isCorrect: dbAns.isCorrect,
+              isLocked: dbAns.isLocked,
+              pointsAwarded: dbAns.pointsAwarded,
+              timeTakenSeconds: dbAns.timeTakenSeconds,
+              submittedAt: dbAns.submittedAt.toISOString(),
+              gameQuestionId: dbAns.gameQuestionId,
+            } as any;
+            this.answers.set(`${gameQuestionId}_${teamId}`, ans!);
+          }
+        } catch (e) {}
+      }
+    }
+
     if (ans) {
       if (!ans.correctOption) {
         const gq = this.gameQuestions.get(gameQuestionId);
@@ -1606,6 +1747,29 @@ export class DemoStore implements StorageEngine {
     gameQuestionId: string,
     teamId: string
   ): Promise<Record<LifelineType, LifelineState>> {
+    const prisma = getPrismaClient();
+    if (prisma) {
+      try {
+        const dbLifelines = await prisma.lifelinePurchase.findMany({
+          where: { gameQuestionId, teamId },
+        });
+        if (dbLifelines && dbLifelines.length > 0) {
+          for (const l of dbLifelines) {
+            this.lifelines.set(`${l.gameQuestionId}_${l.teamId}_${l.lifelineType}`, {
+              id: l.id,
+              gameId: l.gameId,
+              gameQuestionId: l.gameQuestionId,
+              teamId: l.teamId,
+              lifelineType: l.lifelineType as any,
+              costPaid: (l as any).cost ?? (l as any).costPaid ?? 0,
+              details: l.details ? (typeof l.details === "string" ? JSON.parse(l.details) : l.details) : undefined,
+              purchasedAt: l.purchasedAt.toISOString(),
+            });
+          }
+        }
+      } catch (e) {}
+    }
+
     const types: LifelineType[] = ["BULLS_HINT", "VISION_BOOST", "50_50_BLAST", "BULLS_PASS"];
     const costs: Record<LifelineType, number> = {
       BULLS_HINT: 500,
@@ -1685,6 +1849,7 @@ export class DemoStore implements StorageEngine {
 
   // --- Leaderboard ---
   public async getLeaderboard(): Promise<LeaderboardEntry[]> {
+    await this.getAllTeams();
     const teams = Array.from(this.teams.values());
 
     // Count lifelines per team

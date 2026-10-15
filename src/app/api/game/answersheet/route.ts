@@ -19,10 +19,17 @@ export async function GET(req: NextRequest) {
     const storage = await getStorage();
     const answerSheet = await storage.getTeamAnswerSheet(teamId, gameId);
 
-    return NextResponse.json({
-      success: true,
-      answerSheet,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        answerSheet,
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate",
+        },
+      }
+    );
   } catch (err: any) {
     return NextResponse.json(
       { success: false, error: err.message || "Failed to load answer sheet" },

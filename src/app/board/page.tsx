@@ -130,7 +130,7 @@ export default function SmartBoardPage() {
   // 2. High-Frequency HTTP Polling (1000ms interval for live multi-screen sync)
   const fetchGameState = useCallback(async () => {
     try {
-      const res = await fetch("/api/game/state");
+      const res = await fetch("/api/game/state", { cache: "no-store" });
       const data = await res.json();
       if (data.success && data.game) {
         setGameState(data.game);

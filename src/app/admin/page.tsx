@@ -132,7 +132,7 @@ export default function AdminDashboardPage() {
 
   // Check Admin Authentication
   useEffect(() => {
-    fetch("/api/auth/admin/me")
+    fetch("/api/auth/admin/me", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         if (data.authenticated) {
@@ -182,8 +182,8 @@ export default function AdminDashboardPage() {
   const loadInitialData = async () => {
     try {
       const [teamsRes, qRes] = await Promise.all([
-        fetch("/api/admin/teams"),
-        fetch("/api/admin/questions"),
+        fetch("/api/admin/teams", { cache: "no-store" }),
+        fetch("/api/admin/questions", { cache: "no-store" }),
       ]);
 
       if (teamsRes.ok) {
@@ -277,7 +277,7 @@ export default function AdminDashboardPage() {
     if (!authenticated) return;
     const pollInterval = setInterval(async () => {
       try {
-        const res = await fetch("/api/game/state");
+        const res = await fetch("/api/game/state", { cache: "no-store" });
         const data = await res.json();
         if (data.success && data.game) {
           setGameState(data.game);

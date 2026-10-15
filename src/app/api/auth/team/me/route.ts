@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getStorage } from "@/src/server/storage";
 import { verifyTeamToken } from "@/src/server/auth";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
   try {
     const cookieName = process.env.COOKIE_NAME || "bigbull_team_token";
@@ -29,6 +31,11 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ authenticated: false, error: "Team unavailable" }, { status: 404 });
     }
 
+    // Update connection status / heartbeat
+    try {
+      await storage.setTeamConnectionStatus(team.id, "CONNECTED");
+    } catch (e) {}
+
     const game = await storage.getCurrentGame();
     let currentAnswer = null;
     let lifelines: any = {
@@ -53,7 +60,16 @@ export async function GET(req: NextRequest) {
       suspiciousFlagCount: 0,
     };
 
-    return NextResponse.json({ authenticated: true, team, privateState });
+    return NextResponse.json(
+      { authenticated: true, team, privateState },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
+      }
+    );
   } catch (err: any) {
     return NextResponse.json({ authenticated: false, error: err.message }, { status: 500 });
   }

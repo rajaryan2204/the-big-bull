@@ -117,6 +117,7 @@ export interface TeamAnswerRecord {
   submittedAt: string;
   correctOption?: string;
   explanation?: string | null;
+  gameQuestionId?: string;
 }
 
 export interface LifelineState {

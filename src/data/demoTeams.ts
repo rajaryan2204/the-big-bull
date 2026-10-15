@@ -8,13 +8,6 @@ export interface DemoTeamDef {
 
 export const DEMO_TEAMS: DemoTeamDef[] = [
   {
-    teamCode: "TEST",
-    name: "Test Team",
-    members: ["Test User"],
-    accessCode: "test",
-    startingBalance: 50000,
-  },
-  {
     teamCode: "U5694BFT",
     name: "Astra",
     members: ["Monu Kumar Ranjan", "Kishan Kumar", "Vishal Raj"],

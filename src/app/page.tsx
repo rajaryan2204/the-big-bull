@@ -30,7 +30,6 @@ export default function StudentParticipantPortal() {
   const [checkingIncognito, setCheckingIncognito] = useState<boolean>(true);
 
   const demoTeams = [
-    { code: "TEST", name: "Test Team (test/test)" },
     { code: "BULLS-101", name: "Apex Predators" },
     { code: "BULLS-102", name: "Wall Street Wolves" },
     { code: "BULLS-103", name: "Quantum Bulls" },
@@ -55,7 +54,7 @@ export default function StudentParticipantPortal() {
   }, []);
 
   useEffect(() => {
-    fetch("/api/game/state")
+    fetch("/api/game/state", { cache: "no-store" })
       .then((res) => res.json())
       .then((data) => {
         if (data.success && data.game) {
@@ -66,7 +65,7 @@ export default function StudentParticipantPortal() {
 
     checkIncognitoStatus();
 
-    fetch("/api/auth/team/me")
+    fetch("/api/auth/team/me", { cache: "no-store" })
       .then((res) => {
         if (res.ok) router.replace("/team");
       })
@@ -110,7 +109,7 @@ export default function StudentParticipantPortal() {
 
   const quickSelect = (code: string) => {
     setTeamCode(code);
-    setAccessCode(code.toUpperCase() === "TEST" ? "test" : code);
+    setAccessCode(code);
     setError(null);
   };
 

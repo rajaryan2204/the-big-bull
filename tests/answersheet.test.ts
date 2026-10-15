@@ -19,7 +19,7 @@ describe("THE BIG BULL - Immediate Feedback & Answer Sheet Verification", () => 
     await store.updateGameQuestion(gq!.id, { status: "ACTIVE" });
     await store.updateGameStatus("QUESTION_ACTIVE", 0);
 
-    const team = await store.getTeamByCode("TEST");
+    const team = await store.getTeamByCode("BULLS-101");
     expect(team).not.toBeNull();
 
     // 1. Submit Correct Option
@@ -39,11 +39,11 @@ describe("THE BIG BULL - Immediate Feedback & Answer Sheet Verification", () => 
   });
 
   it("should generate a complete 40-question answer sheet for any team", async () => {
-    const sheet = await store.getTeamAnswerSheet("TEST");
+    const sheet = await store.getTeamAnswerSheet("BULLS-101");
 
     expect(sheet).toBeDefined();
     expect(sheet.team).toBeDefined();
-    expect(sheet.team.teamCode).toBe("TEST");
+    expect(sheet.team.teamCode).toBe("BULLS-101");
     expect(sheet.summary).toBeDefined();
     expect(sheet.summary.totalQuestions).toBeGreaterThanOrEqual(1);
     expect(sheet.items).toBeDefined();

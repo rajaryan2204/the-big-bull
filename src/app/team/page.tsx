@@ -101,7 +101,7 @@ export default function TeamTerminalPage() {
 
   // 1. Initial Authentication Check
   useEffect(() => {
-    fetch("/api/auth/team/me")
+    fetch("/api/auth/team/me", { cache: "no-store" })
       .then((res) => {
         if (!res.ok) throw new Error("Unauthorized");
         return res.json();
@@ -351,7 +351,7 @@ export default function TeamTerminalPage() {
   useEffect(() => {
     const fetchGameState = async () => {
       try {
-        const res = await fetch("/api/game/state");
+        const res = await fetch("/api/game/state", { cache: "no-store" });
         const data = await res.json();
         if (data.success && data.game) {
           setGameState(data.game);
@@ -377,7 +377,7 @@ export default function TeamTerminalPage() {
   useEffect(() => {
     const fetchTeamMe = async () => {
       try {
-        const res = await fetch("/api/auth/team/me");
+        const res = await fetch("/api/auth/team/me", { cache: "no-store" });
         if (res.ok) {
           const data = await res.json();
           if (data.authenticated && data.team) {
@@ -399,7 +399,8 @@ export default function TeamTerminalPage() {
       } catch {}
     };
 
-    const teamInterval = setInterval(fetchTeamMe, 2500);
+    fetchTeamMe();
+    const teamInterval = setInterval(fetchTeamMe, 1500);
     return () => clearInterval(teamInterval);
   }, []);
 
@@ -643,27 +644,7 @@ export default function TeamTerminalPage() {
   const secs = Math.max(0, remainingSeconds) % 60;
   const timerDisplay = `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
 
-  const isTestTeam = team?.teamCode?.toUpperCase() === "TEST";
 
-  const handleTesterAction = async (action: string) => {
-    try {
-      const res = await fetch("/api/team/action", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action }),
-      });
-      const data = await res.json();
-      if (action === "tester:reset_strikes") {
-        setStrikes(0);
-        setIsDisqualified(false);
-      }
-      if (action === "tester:refill_coins" && data.newBalance !== undefined) {
-        if (team) setTeam({ ...team, currentBalance: data.newBalance });
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  };
 
   // ==========================================
   // VIEW 0: INCOGNITO ENFORCEMENT BARRIER
@@ -717,14 +698,7 @@ export default function TeamTerminalPage() {
             </div>
           </div>
 
-          {isTestTeam && (
-            <button
-              onClick={() => handleTesterAction("tester:reset_strikes")}
-              className="w-full mt-2 py-3 rounded-xl bg-blue-600 text-white font-bold text-xs hover:bg-blue-700 cursor-pointer shadow-md transition active:scale-[0.99]"
-            >
-              🧪 Reset Strikes & Re-enter (Tester Mode)
-            </button>
-          )}
+
 
           <button
             onClick={handleLogout}
@@ -1223,24 +1197,6 @@ export default function TeamTerminalPage() {
               <EventCountdown size="sm" showDateBadge={true} />
             </div>
 
-            {/* Tester 30s Practice Sandbox Trigger */}
-            {isTestTeam && (
-              <div className="p-3 bg-gradient-to-br from-slate-900 to-blue-950 rounded-xl border border-blue-400/40 text-white shadow-md space-y-2 text-center my-2 animate-in fade-in">
-                <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-amber-300">
-                  <Sparkles className="w-4 h-4 text-amber-400" />
-                  <span>TEST ACCOUNT SANDBOX (30S TIMER)</span>
-                </div>
-                <p className="text-[11px] text-blue-100 leading-tight">
-                  Click below to launch Question 1 with a 30-second timer to test all features and lifelines.
-                </p>
-                <button
-                  onClick={() => handleTesterAction("tester:start_practice")}
-                  className="w-full py-2.5 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black text-xs rounded-xl shadow-md cursor-pointer transition active:scale-98"
-                >
-                  ⚡ Start Question 1 (30s Timer)
-                </button>
-              </div>
-            )}
 
             {team?.members && team.members.length > 0 && (
               <div className="mt-3 pt-3 border-t border-slate-100">
@@ -1288,44 +1244,6 @@ export default function TeamTerminalPage() {
           currentQ &&
           !hasPassed && (
             <div className="flex flex-col gap-2 shrink-0">
-              {/* Tester Sandbox Bar */}
-              {isTestTeam && (
-                <div className="bg-slate-900 border border-amber-500/40 rounded-xl p-1.5 px-2.5 flex items-center justify-between text-white text-[11px] font-bold shadow-md shrink-0">
-                  <span className="text-amber-400 flex items-center gap-1 text-[11px]">
-                    🧪 <span>Test (30s)</span>
-                  </span>
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => handleTesterAction("tester:restart_timer")}
-                      className="px-2 py-0.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-[10px] font-bold cursor-pointer transition active:scale-95"
-                      title="Reset timer to 30 seconds"
-                    >
-                      ⏱️ 30s
-                    </button>
-                    <button
-                      onClick={() => handleTesterAction("tester:refill_coins")}
-                      className="px-2 py-0.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded text-[10px] font-black cursor-pointer transition active:scale-95"
-                      title="Refill 10,000 Coins"
-                    >
-                      💰 +10k
-                    </button>
-                    <button
-                      onClick={() => handleTesterAction("tester:next_question")}
-                      className="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-[10px] font-bold cursor-pointer transition active:scale-95"
-                      title="Next Question with 30s timer"
-                    >
-                      ⏭️ Next
-                    </button>
-                    <button
-                      onClick={() => handleTesterAction("tester:reset_lobby")}
-                      className="px-2 py-0.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded text-[10px] font-bold cursor-pointer transition active:scale-95"
-                      title="Return to Lobby"
-                    >
-                      🏠 Lobby
-                    </button>
-                  </div>
-                </div>
-              )}
 
               {/* Question Sub-Header & Minimal Timer */}
               <div className="flex items-center justify-between border-b border-slate-200 pb-1.5 shrink-0">

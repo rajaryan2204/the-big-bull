@@ -16,17 +16,26 @@ export async function GET(req: NextRequest) {
       answeredCount = answers.length;
     }
 
-    return NextResponse.json({
-      success: true,
-      game,
-      leaderboard,
-      teamsCount: teams.length,
-      connectedTeamsCount: teams.filter((t) => t.connectionStatus === "CONNECTED").length,
-      answeredCount,
-      totalTeamsCount: teams.filter((t) => !t.isDisabled).length,
-      isDemoMode: game.isDemoMode,
-      serverTime: Date.now(),
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        game,
+        leaderboard,
+        teamsCount: teams.length,
+        connectedTeamsCount: teams.filter((t) => t.connectionStatus === "CONNECTED").length,
+        answeredCount,
+        totalTeamsCount: teams.filter((t) => !t.isDisabled).length,
+        isDemoMode: game.isDemoMode,
+        serverTime: Date.now(),
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+          Pragma: "no-cache",
+          Expires: "0",
+        },
+      }
+    );
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }

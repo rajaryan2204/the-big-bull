@@ -37,49 +37,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Team record not found" }, { status: 404 });
     }
 
-    // Tester actions: Available for TEST team or tester:* actions
-    if (action === "tester:reset_strikes") {
-      const reset = await storage.resetTeamStrikes(team.id);
-      try {
-        await getGameEngine().broadcastAll();
-      } catch (e) {}
-      return NextResponse.json({ success: true, team: reset });
-    }
-
-    if (action === "tester:refill_coins") {
-      const adj = await storage.adjustCoins(team.id, 10000, "ADMIN_CREDIT", {
-        eventDetails: "Tester Wallet Refill (+10,000 Coins)",
-      });
-      try {
-        await getGameEngine().broadcastAll();
-      } catch (e) {}
-      return NextResponse.json({ success: true, newBalance: adj.newBalance });
-    }
-
-    if (action === "tester:start_practice" || action === "tester:restart_timer") {
-      const idx = game.currentQuestionIndex || 0;
-      await getGameEngine().openQuestionAtIndex(idx, 30);
-      return NextResponse.json({ success: true, status: "QUESTION_ACTIVE", durationSeconds: 30 });
-    }
-
-    if (action === "tester:next_question") {
-      const nextIdx = ((game.currentQuestionIndex ?? 0) + 1) % (game.totalQuestions || 40);
-      await getGameEngine().openQuestionAtIndex(nextIdx, 30);
-      return NextResponse.json({ success: true, status: "QUESTION_ACTIVE", durationSeconds: 30 });
-    }
-
-    if (action === "tester:reset_lobby") {
-      await storage.updateGameStatus("LOBBY");
-      try {
-        await getGameEngine().broadcastAll();
-      } catch (e) {}
-      return NextResponse.json({ success: true, status: "LOBBY" });
-    }
-
-    if (action === "tester:reveal_answer") {
-      await getGameEngine().revealAnswer();
-      return NextResponse.json({ success: true });
-    }
 
     if (team.isDisabled || team.isDisqualified) {
       return NextResponse.json({ error: "Team is disqualified or disabled." }, { status: 403 });
