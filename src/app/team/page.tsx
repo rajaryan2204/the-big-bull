@@ -317,13 +317,22 @@ export default function TeamTerminalPage() {
     };
   }, [hasEnteredTerminal, isDisqualified, triggerSecurityStrike]);
 
-  // Reset selectedOption when moving to a new question
+  // Reset selectedOption and answer state when moving to a new question
   const currentQId = gameState?.currentQuestion?.id;
   const prevQIdRef = useRef<string | null>(null);
   useEffect(() => {
     if (currentQId && currentQId !== prevQIdRef.current) {
       prevQIdRef.current = currentQId;
       setSelectedOption(null);
+      setPrivateState((prev) =>
+        prev
+          ? {
+              ...prev,
+              currentAnswer: null,
+              hasPassed: false,
+            }
+          : null
+      );
     }
   }, [currentQId]);
 
@@ -458,7 +467,7 @@ export default function TeamTerminalPage() {
     }, 30);
   };
 
-  // Submit Answer
+  // Submit Answer with Immediate Verification & Sound
   const submitAnswer = async (option: string) => {
     if (!gameState?.currentQuestion || lockingIn) return;
     setLockingIn(true);
@@ -467,13 +476,63 @@ export default function TeamTerminalPage() {
 
     const timeTaken = Math.max(0, (gameState.currentQuestion.durationSeconds || 120) - remainingSeconds);
 
+    const applyVerdict = (payload: any) => {
+      const isCorrect = payload?.isCorrect ?? payload?.answer?.isCorrect;
+      const correctOption = payload?.correctOption ?? payload?.answer?.correctOption;
+      const explanation = payload?.explanation ?? payload?.answer?.explanation;
+      const pointsAwarded = payload?.answer?.pointsAwarded ?? (isCorrect ? 1000 : -200);
+
+      setSelectedOption(option);
+      setPrivateState((prev) => ({
+        team: prev?.team || team || ({} as any),
+        currentAnswer: {
+          ...(payload?.answer || {}),
+          id: payload?.answer?.id || `ans-${Date.now()}`,
+          teamId: team?.id || "",
+          selectedOption: option,
+          isLocked: true,
+          isCorrect,
+          correctOption,
+          explanation,
+          pointsAwarded,
+          submittedAt: payload?.answer?.submittedAt || new Date().toISOString(),
+        },
+        lifelines: prev?.lifelines || ({} as any),
+        hasPassed: prev?.hasPassed || false,
+        suspiciousFlagCount: prev?.suspiciousFlagCount || 0,
+      }));
+
+      // Update local team stats immediately for instant feedback
+      if (team) {
+        setTeam((prev) => {
+          if (!prev) return prev;
+          const scoreDelta = isCorrect ? 1000 : -200;
+          return {
+            ...prev,
+            score: Math.max(0, (prev.score || 0) + scoreDelta),
+            correctAnswers: isCorrect ? (prev.correctAnswers || 0) + 1 : prev.correctAnswers,
+            attemptedQuestions: (prev.attemptedQuestions || 0) + 1,
+          };
+        });
+      }
+
+      if (isCorrect === true) {
+        soundFx.playRewardChime();
+      } else if (isCorrect === false) {
+        soundFx.playStrikeAlarm();
+      }
+    };
+
     let socketSuccess = false;
     if (socketRef.current && socketRef.current.connected) {
       socketRef.current.emit(
         "team:submit_answer",
         { selectedOption: option, timeTakenSeconds: timeTaken },
         (res: any) => {
-          if (res?.success) socketSuccess = true;
+          if (res?.success) {
+            socketSuccess = true;
+            applyVerdict(res);
+          }
         }
       );
     }
@@ -496,15 +555,8 @@ export default function TeamTerminalPage() {
       const data = await res.json();
       if (!res.ok && !socketSuccess) {
         alert(data.error || "Submission failed.");
-      } else if (data.answer) {
-        setSelectedOption(data.answer.selectedOption);
-        setPrivateState((prev) => ({
-          team: prev?.team || team || ({} as any),
-          currentAnswer: data.answer,
-          lifelines: prev?.lifelines || ({} as any),
-          hasPassed: prev?.hasPassed || false,
-          suspiciousFlagCount: prev?.suspiciousFlagCount || 0,
-        }));
+      } else if (data.success || data.answer) {
+        applyVerdict(data);
       }
     } catch {
       if (!socketSuccess) console.error("HTTP fallback submit error");
@@ -1352,15 +1404,31 @@ export default function TeamTerminalPage() {
                   const isSelected = selectedOption === opt.key;
                   const isLocked = lockedAnswer?.selectedOption === opt.key;
                   const isReveal = gameStatus === "ANSWER_REVEAL";
-                  const isCorrect = isReveal && currentQ.correctOption === opt.key;
+                  const hasLockedEval = lockedAnswer && lockedAnswer.isCorrect !== undefined && lockedAnswer.isCorrect !== null;
+                  const isLockedCorrect = hasLockedEval && lockedAnswer.isCorrect === true;
+                  const isLockedIncorrect = hasLockedEval && lockedAnswer.isCorrect === false;
+                  const isTargetCorrectOption = hasLockedEval && lockedAnswer.correctOption === opt.key;
+                  const isRevealCorrect = isReveal && currentQ.correctOption === opt.key;
 
                   let style = "bg-white border-slate-200 text-slate-800 hover:border-blue-300 hover:bg-blue-50/20";
                   if (isEliminated) {
                     style = "bg-slate-100 border-slate-200 text-slate-400 line-through opacity-40 cursor-not-allowed";
+                  } else if (hasLockedEval) {
+                    if (isLocked) {
+                      if (isLockedCorrect) {
+                        style = "bg-emerald-600 border-emerald-600 text-white font-bold shadow-md";
+                      } else {
+                        style = "bg-red-600 border-red-600 text-white font-bold shadow-md";
+                      }
+                    } else if (isLockedIncorrect && isTargetCorrectOption) {
+                      style = "bg-emerald-50 border-2 border-emerald-600 text-emerald-950 font-bold ring-1 ring-emerald-500/30";
+                    } else {
+                      style = "bg-slate-50 border-slate-200 text-slate-400 opacity-40";
+                    }
                   } else if (isReveal) {
-                    if (isCorrect) {
+                    if (isRevealCorrect) {
                       style = "bg-emerald-600 border-emerald-600 text-white font-bold shadow-sm";
-                    } else if (isLocked && !isCorrect) {
+                    } else if (isLocked && !isRevealCorrect) {
                       style = "bg-red-50 border-red-300 text-red-800 opacity-90";
                     } else {
                       style = "bg-slate-50 border-slate-200 text-slate-400 opacity-50";
@@ -1382,7 +1450,11 @@ export default function TeamTerminalPage() {
                       <div className="flex items-center gap-2.5 truncate">
                         <span
                           className={`w-6 h-6 rounded-md flex items-center justify-center font-bold text-xs shrink-0 ${
-                            isCorrect || isLocked
+                            (hasLockedEval && isLocked) || (isReveal && isRevealCorrect)
+                              ? "bg-white text-slate-900"
+                              : (hasLockedEval && isLockedIncorrect && isTargetCorrectOption)
+                              ? "bg-emerald-600 text-white"
+                              : isLocked
                               ? "bg-white text-blue-700"
                               : isSelected
                               ? "bg-blue-600 text-white"
@@ -1400,14 +1472,35 @@ export default function TeamTerminalPage() {
                         </div>
                       )}
 
-                      {isLocked && (
+                      {hasLockedEval && isLocked && isLockedCorrect && (
+                        <div className="flex items-center gap-1 text-[10px] font-black text-emerald-100 uppercase shrink-0 ml-1">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-white" />
+                          <span>Correct (+1,000)</span>
+                        </div>
+                      )}
+
+                      {hasLockedEval && isLocked && isLockedIncorrect && (
+                        <div className="flex items-center gap-1 text-[10px] font-black text-red-100 uppercase shrink-0 ml-1">
+                          <XCircle className="w-3.5 h-3.5 text-white" />
+                          <span>Wrong (-200)</span>
+                        </div>
+                      )}
+
+                      {hasLockedEval && isLockedIncorrect && isTargetCorrectOption && (
+                        <div className="flex items-center gap-1 text-[10px] font-black text-emerald-700 uppercase shrink-0 ml-1 bg-emerald-100 px-1.5 py-0.5 rounded">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          <span>Correct Answer</span>
+                        </div>
+                      )}
+
+                      {!hasLockedEval && isLocked && (
                         <div className="flex items-center gap-1 text-[10px] font-bold text-blue-100 uppercase shrink-0 ml-1">
                           <Lock className="w-3 h-3" />
                           <span>Locked</span>
                         </div>
                       )}
 
-                      {isCorrect && (
+                      {isReveal && isRevealCorrect && !hasLockedEval && (
                         <div className="flex items-center gap-1 text-[10px] font-bold text-white uppercase shrink-0 ml-1">
                           <CheckCircle2 className="w-3 h-3" />
                           <span>Correct</span>
@@ -1431,18 +1524,57 @@ export default function TeamTerminalPage() {
                 </button>
               )}
 
+              {/* Immediate Verdict Banner */}
               {lockedAnswer && (
-                <div className="py-2 px-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 text-xs flex items-center justify-between shrink-0">
-                  <div className="flex items-center gap-1.5 font-medium">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
-                    <span>Answer Locked: Option {lockedAnswer.selectedOption}</span>
-                  </div>
-                  <span className="text-[10px] text-blue-600 font-semibold">Waiting for Reveal</span>
+                <div className="shrink-0 space-y-1.5 animate-in fade-in duration-200">
+                  {lockedAnswer.isCorrect === true ? (
+                    <div className="py-2 px-3 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-950 text-xs shadow-xs">
+                      <div className="flex items-center justify-between font-bold">
+                        <div className="flex items-center gap-1.5 text-emerald-700">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <span>Correct Answer! (+1,000 Points Added)</span>
+                        </div>
+                        <span className="text-[10px] font-mono text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-200">
+                          Locked [{lockedAnswer.selectedOption}]
+                        </span>
+                      </div>
+                      {lockedAnswer.explanation && (
+                        <p className="text-[10px] text-emerald-900/90 font-medium mt-1 leading-snug">
+                          <strong>Note:</strong> {lockedAnswer.explanation}
+                        </p>
+                      )}
+                    </div>
+                  ) : lockedAnswer.isCorrect === false ? (
+                    <div className="py-2 px-3 rounded-xl bg-red-50 border border-red-300 text-red-950 text-xs shadow-xs">
+                      <div className="flex items-center justify-between font-bold">
+                        <div className="flex items-center gap-1.5 text-red-700">
+                          <XCircle className="w-4 h-4 text-red-600 shrink-0" />
+                          <span>Incorrect Selection (-200 Points)</span>
+                        </div>
+                        <span className="text-[10px] font-mono text-red-800 bg-red-100 px-1.5 py-0.5 rounded border border-red-200">
+                          Correct: Option {lockedAnswer.correctOption || "—"}
+                        </span>
+                      </div>
+                      {lockedAnswer.explanation && (
+                        <p className="text-[10px] text-red-950/90 font-medium mt-1 leading-snug">
+                          <strong>Note:</strong> {lockedAnswer.explanation}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="py-2 px-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 text-xs flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 font-medium">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Answer Locked: Option {lockedAnswer.selectedOption}</span>
+                      </div>
+                      <span className="text-[10px] text-blue-600 font-semibold">Verified</span>
+                    </div>
+                  )}
                 </div>
               )}
 
-              {/* Solution on Reveal */}
-              {gameStatus === "ANSWER_REVEAL" && currentQ.explanation && (
+              {/* Solution on Reveal (if not already shown in immediate verdict) */}
+              {gameStatus === "ANSWER_REVEAL" && currentQ.explanation && !lockedAnswer?.explanation && (
                 <div className="py-1.5 px-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-950 text-[11px] flex items-center gap-1.5 shrink-0">
                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                   <span className="truncate"><strong>Solution:</strong> {currentQ.explanation}</span>
@@ -1450,6 +1582,23 @@ export default function TeamTerminalPage() {
               )}
             </div>
           )}
+
+        {/* WHEN ANSWER LOCKED: LIVE SCORECARD SUMMARY (ZERO SCROLL) */}
+        {gameStatus === "QUESTION_ACTIVE" && lockedAnswer && (
+          <div className="pt-1.5 border-t border-slate-200 shrink-0">
+            <div className="py-1.5 px-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-[11px] font-mono">
+              <span className="text-slate-600">
+                Score: <strong className="text-blue-700">{(team?.score ?? 0).toLocaleString()} pts</strong>
+              </span>
+              <span className="text-slate-600">
+                Accuracy: <strong className="text-emerald-700">{team?.correctAnswers ?? 0}</strong>/{team?.attemptedQuestions ?? 0}
+              </span>
+              <span className="text-slate-600">
+                Coins: <strong className="text-amber-700">{(team?.currentBalance ?? 0).toLocaleString()} C</strong>
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* LIFELINES 1-ROW BAR (ZERO SCROLLING) */}
         {gameStatus === "QUESTION_ACTIVE" && !hasPassed && !lockedAnswer && (

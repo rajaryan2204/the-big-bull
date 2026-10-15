@@ -115,6 +115,8 @@ export interface TeamAnswerRecord {
   pointsAwarded: number;
   timeTakenSeconds?: number | null;
   submittedAt: string;
+  correctOption?: string;
+  explanation?: string | null;
 }
 
 export interface LifelineState {

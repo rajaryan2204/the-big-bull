@@ -68,13 +68,21 @@ export interface StorageEngine {
   // Answers & Scoring
   getAnswersForQuestion(gameQuestionId: string): Promise<TeamAnswerRecord[]>;
   getTeamAnswer(gameQuestionId: string, teamId: string): Promise<TeamAnswerRecord | null>;
+  getTeamAnswerSheet(teamId: string, gameId?: string): Promise<any>;
   submitAnswer(
     gameId: string,
     gameQuestionId: string,
     teamId: string,
     selectedOption: string,
     timeTakenSeconds?: number
-  ): Promise<{ success: boolean; answer?: TeamAnswerRecord; error?: string }>;
+  ): Promise<{
+    success: boolean;
+    answer?: TeamAnswerRecord;
+    isCorrect?: boolean;
+    correctOption?: string;
+    explanation?: string | null;
+    error?: string;
+  }>;
   revealAnswersAndScore(gameId: string, gameQuestionId: string): Promise<{
     correctOption: string;
     explanation?: string;
@@ -1065,7 +1073,19 @@ export class DemoStore implements StorageEngine {
   }
 
   public async getTeamAnswer(gameQuestionId: string, teamId: string): Promise<TeamAnswerRecord | null> {
-    return this.answers.get(`${gameQuestionId}_${teamId}`) || null;
+    const ans = this.answers.get(`${gameQuestionId}_${teamId}`);
+    if (ans) {
+      if (!ans.correctOption) {
+        const gq = this.gameQuestions.get(gameQuestionId);
+        const q = gq ? this.questions.get(gq.questionId) : null;
+        if (q) {
+          ans.correctOption = q.correctOption;
+          ans.explanation = q.explanation;
+        }
+      }
+      return ans;
+    }
+    return null;
   }
 
   public async submitAnswer(
@@ -1074,7 +1094,14 @@ export class DemoStore implements StorageEngine {
     teamId: string,
     selectedOption: string,
     timeTakenSeconds?: number
-  ): Promise<{ success: boolean; answer?: TeamAnswerRecord; error?: string }> {
+  ): Promise<{
+    success: boolean;
+    answer?: TeamAnswerRecord;
+    isCorrect?: boolean;
+    correctOption?: string;
+    explanation?: string | null;
+    error?: string;
+  }> {
     const team = this.teams.get(teamId);
     if (!team) return { success: false, error: "Team not found" };
     if (team.isDisabled || team.isDisqualified) {
@@ -1114,17 +1141,38 @@ export class DemoStore implements StorageEngine {
       return { success: false, error: "Invalid option selection." };
     }
 
+    const question = this.questions.get(gq.questionId);
+    const isCorrect = question ? opt === question.correctOption.trim().toUpperCase() : false;
+    const reward = this.game?.correctReward ?? 1000;
+    const penalty = this.game?.incorrectPenalty ?? 200;
+    const pointsAwarded = isCorrect ? reward : -penalty;
+
     const answerRecord: TeamAnswerRecord = {
       id: `ans-${Date.now()}-${teamId}`,
       teamId,
       selectedOption: opt,
       isLocked: true,
-      pointsAwarded: 0,
+      isCorrect,
+      pointsAwarded,
       timeTakenSeconds: timeTakenSeconds || null,
       submittedAt: new Date().toISOString(),
+      correctOption: question?.correctOption,
+      explanation: question?.explanation,
     };
     (answerRecord as any).gameQuestionId = gameQuestionId;
     this.answers.set(key, answerRecord);
+
+    // Update team stats immediately for live feedback
+    if (!existing) {
+      team.attemptedQuestions = (team.attemptedQuestions || 0) + 1;
+      if (isCorrect) {
+        team.correctAnswers = (team.correctAnswers || 0) + 1;
+        team.score = (team.score || 0) + reward;
+      } else {
+        team.score = Math.max(0, (team.score || 0) - penalty);
+      }
+      this.teams.set(teamId, team);
+    }
 
     const prisma = getPrismaClient();
     if (prisma) {
@@ -1143,23 +1191,189 @@ export class DemoStore implements StorageEngine {
             teamId,
             selectedOption: opt,
             isLocked: true,
-            pointsAwarded: 0,
+            isCorrect,
+            pointsAwarded,
             timeTakenSeconds: timeTakenSeconds || null,
             submittedAt: new Date(answerRecord.submittedAt),
           },
           update: {
             selectedOption: opt,
+            isCorrect,
+            pointsAwarded,
             timeTakenSeconds: timeTakenSeconds || null,
           },
         });
+        await prisma.team.update({
+          where: { id: team.id },
+          data: {
+            attemptedQuestions: team.attemptedQuestions,
+            correctAnswers: team.correctAnswers,
+            score: team.score,
+          },
+        }).catch(() => {});
       } catch (e: any) {
         console.warn("Prisma submitAnswer sync error:", e.message);
       }
     }
 
-    this.logAudit("ANSWER_SUBMITTED", "TEAM", { gameQuestionId, selectedOption: opt }, { gameId, teamId });
+    this.logAudit("ANSWER_SUBMITTED", "TEAM", { gameQuestionId, selectedOption: opt, isCorrect }, { gameId, teamId });
     this.saveToFile();
-    return { success: true, answer: answerRecord };
+    return {
+      success: true,
+      answer: answerRecord,
+      isCorrect,
+      correctOption: question?.correctOption,
+      explanation: question?.explanation,
+    };
+  }
+
+  public async getTeamAnswerSheet(teamIdOrCode: string, targetGameId?: string): Promise<any> {
+    let team = this.teams.get(teamIdOrCode);
+    if (!team) {
+      team = Array.from(this.teams.values()).find(
+        (t) => t.teamCode?.toUpperCase() === teamIdOrCode?.toUpperCase() || t.id === teamIdOrCode
+      );
+    }
+    const prisma = getPrismaClient();
+    if (!team && prisma) {
+      try {
+        const dbTeam = await prisma.team.findFirst({
+          where: {
+            OR: [{ id: teamIdOrCode }, { teamCode: teamIdOrCode }],
+          },
+        });
+        if (dbTeam) {
+          team = dbTeam as any;
+          this.teams.set(dbTeam.id, team!);
+        }
+      } catch {}
+    }
+    if (!team) throw new Error("Team not found");
+
+    const teamId = team.id;
+    if (prisma) {
+      try {
+        const dbAnswers = await prisma.teamAnswer.findMany({
+          where: { teamId },
+        });
+        for (const da of dbAnswers) {
+          const key = `${da.gameQuestionId}_${teamId}`;
+          if (!this.answers.has(key)) {
+            this.answers.set(key, {
+              id: da.id,
+              teamId: da.teamId,
+              selectedOption: da.selectedOption,
+              isLocked: da.isLocked,
+              isCorrect: da.isCorrect,
+              pointsAwarded: da.pointsAwarded,
+              timeTakenSeconds: da.timeTakenSeconds,
+              submittedAt: da.submittedAt.toISOString(),
+            });
+          }
+        }
+      } catch {}
+    }
+
+    const game = targetGameId
+      ? (this.game?.id === targetGameId ? this.game : await this.getCurrentGame())
+      : (this.game || (await this.getCurrentGame()));
+
+    const gameQuestions = Array.from(this.gameQuestions.values())
+      .filter((gq) => gq.gameId === game.id)
+      .sort((a, b) => a.orderIndex - b.orderIndex);
+
+    let attempted = 0;
+    let correct = 0;
+    let incorrect = 0;
+    let passed = 0;
+
+    const items = gameQuestions.map((gq, idx) => {
+      const q = this.questions.get(gq.questionId);
+      const ansKey = `${gq.id}_${teamId}`;
+      const ans = this.answers.get(ansKey);
+      const isPassed = !!this.lifelines.get(`${gq.id}_${teamId}_BULLS_PASS`);
+
+      const lifelinesUsed: string[] = [];
+      const types = ["BULLS_HINT", "VISION_BOOST", "50_50_BLAST", "BULLS_PASS"];
+      for (const t of types) {
+        if (this.lifelines.get(`${gq.id}_${teamId}_${t}`)) {
+          lifelinesUsed.push(t);
+        }
+      }
+
+      let isCorrect: boolean | null = null;
+      let pointsAwarded = 0;
+
+      if (isPassed) {
+        passed++;
+      } else if (ans) {
+        attempted++;
+        isCorrect = q ? ans.selectedOption.toUpperCase() === q.correctOption.toUpperCase() : false;
+        if (isCorrect) {
+          correct++;
+          pointsAwarded = ans.pointsAwarded || (this.game?.correctReward ?? 1000);
+        } else {
+          incorrect++;
+          pointsAwarded = ans.pointsAwarded || -(this.game?.incorrectPenalty ?? 200);
+        }
+      }
+
+      return {
+        orderIndex: gq.orderIndex ?? idx,
+        questionId: gq.questionId,
+        questionText: q?.text || `Question ${idx + 1}`,
+        category: q?.category || "General Knowledge",
+        options: {
+          A: q?.optionA || "",
+          B: q?.optionB || "",
+          C: q?.optionC || "",
+          D: q?.optionD || "",
+        },
+        correctOption: q?.correctOption || "A",
+        teamOption: ans?.selectedOption || null,
+        isCorrect,
+        isPassed,
+        pointsAwarded,
+        timeTakenSeconds: ans?.timeTakenSeconds || null,
+        lifelinesUsed,
+        explanation: q?.explanation || null,
+        imageUrl: q?.imageUrl || null,
+      };
+    });
+
+    const accuracyPercent = attempted > 0 ? Math.round((correct / attempted) * 100) : 0;
+
+    return {
+      team: {
+        id: team.id,
+        teamCode: team.teamCode,
+        name: team.name,
+        members: team.members,
+        startingBalance: team.startingBalance,
+        currentBalance: team.currentBalance,
+        score: team.score,
+        correctAnswers: correct,
+        attemptedQuestions: attempted,
+        isActive: team.isActive,
+        isDisabled: team.isDisabled,
+        isDisqualified: team.isDisqualified,
+        strikesCount: team.strikesCount,
+        connectionStatus: team.connectionStatus,
+        lastSeenAt: team.lastSeenAt,
+      },
+      summary: {
+        totalQuestions: gameQuestions.length,
+        attempted,
+        correct,
+        incorrect,
+        passed,
+        unanswered: Math.max(0, gameQuestions.length - attempted - passed),
+        totalPoints: team.score,
+        currentBalance: team.currentBalance,
+        accuracyPercent,
+      },
+      items,
+    };
   }
 
   public async revealAnswersAndScore(
@@ -1197,17 +1411,20 @@ export class DemoStore implements StorageEngine {
       }
 
       if (answer) {
-        team.attemptedQuestions = (team.attemptedQuestions || 0) + 1;
         const isCorrect = answer.selectedOption.toUpperCase() === correctOption.toUpperCase();
-        answer.isCorrect = isCorrect;
+        const alreadyScored = answer.pointsAwarded !== 0 || answer.isCorrect !== undefined;
 
-        if (isCorrect) {
-          answer.pointsAwarded = correctReward;
-          team.score += correctReward;
-          team.correctAnswers = (team.correctAnswers || 0) + 1;
-        } else {
-          answer.pointsAwarded = -incorrectPenalty;
-          team.score = Math.max(0, team.score - incorrectPenalty);
+        answer.isCorrect = isCorrect;
+        if (!alreadyScored) {
+          team.attemptedQuestions = (team.attemptedQuestions || 0) + 1;
+          if (isCorrect) {
+            answer.pointsAwarded = correctReward;
+            team.score += correctReward;
+            team.correctAnswers = (team.correctAnswers || 0) + 1;
+          } else {
+            answer.pointsAwarded = -incorrectPenalty;
+            team.score = Math.max(0, team.score - incorrectPenalty);
+          }
         }
         this.answers.set(key, answer);
         this.teams.set(team.id, team);

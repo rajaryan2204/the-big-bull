@@ -214,6 +214,33 @@ class SoundFxManager {
       });
     } catch (e) {}
   }
+
+  // 8. Reward Chime (Correct Answer Verdict)
+  public playRewardChime() {
+    if (this.isMuted) return;
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    try {
+      const pitches = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6
+      pitches.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.07);
+
+        gain.gain.setValueAtTime(0.22, ctx.currentTime + idx * 0.07);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.07 + 0.3);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(ctx.currentTime + idx * 0.07);
+        osc.stop(ctx.currentTime + idx * 0.07 + 0.32);
+      });
+    } catch (e) {}
+  }
 }
 
 export const soundFx = new SoundFxManager();

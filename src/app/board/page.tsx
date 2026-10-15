@@ -20,6 +20,11 @@ import {
   ChevronRight,
   X,
   RotateCcw,
+  Medal,
+  Award,
+  FileText,
+  XCircle,
+  Filter,
 } from "lucide-react";
 import { GameState, LeaderboardEntry } from "@/src/types";
 import { BullLogo } from "@/src/components/BullLogo";
@@ -37,6 +42,14 @@ export default function SmartBoardPage() {
   });
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [revealData, setRevealData] = useState<{ correctOption?: string; explanation?: string } | null>(null);
+
+  // Championship Podium & Answer Sheet State
+  const [viewMode, setViewMode] = useState<"DEFAULT" | "PODIUM">("DEFAULT");
+  const [selectedTeamForSheet, setSelectedTeamForSheet] = useState<LeaderboardEntry | null>(null);
+  const [answerSheetData, setAnswerSheetData] = useState<any | null>(null);
+  const [sheetLoading, setSheetLoading] = useState<boolean>(false);
+  const [sheetError, setSheetError] = useState<string | null>(null);
+  const [sheetFilter, setSheetFilter] = useState<"ALL" | "CORRECT" | "INCORRECT" | "PASSED">("ALL");
 
   // Host Launch and Presentation Controls
   const [showHostModal, setShowHostModal] = useState<boolean>(false);
@@ -250,6 +263,28 @@ export default function SmartBoardPage() {
     }
   };
 
+  // Open and load Answer Sheet for any team
+  const openAnswerSheet = async (entry: LeaderboardEntry) => {
+    setSelectedTeamForSheet(entry);
+    setSheetLoading(true);
+    setSheetError(null);
+    setAnswerSheetData(null);
+    setSheetFilter("ALL");
+
+    try {
+      const res = await fetch(`/api/game/answersheet?teamId=${encodeURIComponent(entry.teamId)}`);
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to load answer sheet.");
+      }
+      setAnswerSheetData(data.answerSheet);
+    } catch (e: any) {
+      setSheetError(e.message || "Failed to load answer sheet.");
+    } finally {
+      setSheetLoading(false);
+    }
+  };
+
   // 6. Automatic 5-Minute Timer Expiry & Progression
   useEffect(() => {
     const curStatus = gameState?.status;
@@ -432,15 +467,57 @@ export default function SmartBoardPage() {
                 <Trophy className="w-3.5 h-3.5 text-amber-500" />
                 <span className="hidden lg:inline">Standings</span>
               </button>
+
+              <button
+                onClick={() => setViewMode(viewMode === "PODIUM" || status === "FINISHED" ? "DEFAULT" : "PODIUM")}
+                className={`px-2.5 py-1.5 rounded-lg border text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
+                  viewMode === "PODIUM" || status === "FINISHED"
+                    ? "bg-amber-500 border-amber-600 text-white shadow-xs"
+                    : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                }`}
+                title="Toggle Championship Top 3 Podium & Results"
+              >
+                <Award className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Top 3 Podium</span>
+              </button>
+
+              {status !== "FINISHED" && (
+                <button
+                  onClick={() => {
+                    if (confirm("Conclude championship and declare final winners?")) {
+                      handleHostCommand("end_game").then(() => setViewMode("PODIUM"));
+                    }
+                  }}
+                  className="px-2.5 py-1.5 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                  title="Conclude Event"
+                >
+                  <span className="hidden sm:inline">End Event</span>
+                </button>
+              )}
             </div>
           ) : (
-            <button
-              onClick={() => setShowHostModal(true)}
-              className="px-3 py-1.5 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
-            >
-              <Key className="w-3.5 h-3.5" />
-              <span>Host Login</span>
-            </button>
+            <>
+              <button
+                onClick={() => setViewMode(viewMode === "PODIUM" || status === "FINISHED" ? "DEFAULT" : "PODIUM")}
+                className={`px-2.5 py-1.5 rounded-lg border text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                  viewMode === "PODIUM" || status === "FINISHED"
+                    ? "bg-amber-500 border-amber-600 text-white shadow-xs"
+                    : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+                }`}
+                title="Toggle Championship Top 3 Podium & Results"
+              >
+                <Award className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">{viewMode === "PODIUM" || status === "FINISHED" ? "Live Board" : "Top 3 Results"}</span>
+              </button>
+
+              <button
+                onClick={() => setShowHostModal(true)}
+                className="px-3 py-1.5 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+              >
+                <Key className="w-3.5 h-3.5" />
+                <span>Host Login</span>
+              </button>
+            </>
           )}
 
           {/* Audio Toggle */}
@@ -546,7 +623,13 @@ export default function SmartBoardPage() {
       {/* ========================================================= */}
       {/* MAIN PRESENTATION STAGE */}
       {/* ========================================================= */}
-      <main className="flex-1 max-w-[1500px] mx-auto w-full p-4 sm:p-6 lg:p-7 flex flex-col justify-center overflow-hidden">
+      <main
+        className={`flex-1 max-w-[1500px] mx-auto w-full p-4 sm:p-6 lg:p-7 flex flex-col ${
+          status === "FINISHED" || viewMode === "PODIUM" || status === "LEADERBOARD"
+            ? "overflow-y-auto justify-start py-6"
+            : "justify-center overflow-hidden"
+        }`}
+      >
         {/* LOBBY / READY VIEW */}
         {(status === "LOBBY" || status === "READY") && (
           <div className="flex flex-col lg:flex-row items-center justify-between gap-10 my-auto">
@@ -787,7 +870,7 @@ export default function SmartBoardPage() {
           )}
 
         {/* LEADERBOARD BROADCAST */}
-        {status === "LEADERBOARD" && (
+        {status === "LEADERBOARD" && viewMode !== "PODIUM" && (
           <div className="max-w-5xl mx-auto w-full my-auto space-y-6">
             <div className="text-center space-y-1">
               <span className="text-xs text-blue-600 font-bold uppercase tracking-wider bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
@@ -807,6 +890,7 @@ export default function SmartBoardPage() {
                     <th className="py-4 px-6 text-center">Score</th>
                     <th className="py-4 px-6 text-center">Accuracy</th>
                     <th className="py-4 px-6 text-right">Coins</th>
+                    <th className="py-4 px-6 text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -839,6 +923,15 @@ export default function SmartBoardPage() {
                       <td className="py-4 px-6 text-right font-bold text-slate-800">
                         💰 {entry.currentBalance.toLocaleString()}
                       </td>
+                      <td className="py-4 px-6 text-right">
+                        <button
+                          onClick={() => openAnswerSheet(entry)}
+                          className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 text-slate-700 text-xs font-bold transition flex items-center gap-1 ml-auto cursor-pointer"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          <span>Answer Sheet</span>
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -846,7 +939,624 @@ export default function SmartBoardPage() {
             </div>
           </div>
         )}
+
+        {/* ========================================================= */}
+        {/* GRAND FINALE: TOP 3 PODIUM & FULL TOURNAMENT RESULTS */}
+        {/* ========================================================= */}
+        {(status === "FINISHED" || viewMode === "PODIUM") && (
+          <div className="max-w-6xl mx-auto w-full space-y-8 animate-in fade-in duration-300">
+            {/* Finale Header */}
+            <div className="text-center space-y-2">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-amber-50 border border-amber-300 text-amber-900 text-xs font-black uppercase tracking-wider shadow-2xs">
+                <Sparkles className="w-4 h-4 text-amber-500" />
+                <span>Championship Concluded • Official Tournament Standings</span>
+              </div>
+              <h2 className="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">
+                THE BIG BULL <span className="text-amber-500">WINNERS PODIUM</span>
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-500 max-w-xl mx-auto">
+                Official verified results of THE BIG BULL Championship 2026. Click any team below to inspect their full question-by-question answer sheet.
+              </p>
+            </div>
+
+            {/* TOP 3 OLYMPIC PODIUM CARDS */}
+            {leaderboard.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6 items-end pt-4">
+                {/* 2ND PLACE (SILVER) */}
+                {leaderboard[1] && (
+                  <div className="order-2 md:order-1 rounded-3xl bg-linear-to-b from-slate-200/50 via-slate-100/30 to-white border-2 border-slate-300 p-5 sm:p-6 shadow-md flex flex-col justify-between h-[370px] relative transition-transform hover:-translate-y-1">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="px-3 py-1 rounded-full bg-slate-200 text-slate-800 text-[11px] font-black uppercase tracking-wider border border-slate-300 flex items-center gap-1.5">
+                          <Medal className="w-3.5 h-3.5 text-slate-600" />
+                          <span>🥈 2nd Place • Runner Up</span>
+                        </span>
+                        <span className="font-mono text-xs text-slate-500 font-bold">
+                          #{leaderboard[1].rank}
+                        </span>
+                      </div>
+
+                      <div>
+                        <h3 className="text-xl sm:text-2xl font-black text-slate-900 truncate">
+                          {leaderboard[1].teamName}
+                        </h3>
+                        <div className="text-xs text-slate-500 font-mono mt-0.5">
+                          {leaderboard[1].teamCode}
+                        </div>
+                      </div>
+
+                      {leaderboard[1].members && leaderboard[1].members.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {leaderboard[1].members.map((m, idx) => (
+                            <span
+                              key={idx}
+                              className="text-[11px] font-semibold text-slate-700 bg-white px-2 py-0.5 rounded-md border border-slate-200 shadow-2xs"
+                            >
+                              {m}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-3 pt-4 border-t border-slate-200">
+                      <div className="grid grid-cols-3 gap-2 text-center font-mono">
+                        <div className="p-2 rounded-xl bg-white border border-slate-200">
+                          <div className="text-[10px] text-slate-400 font-bold uppercase">Score</div>
+                          <div className="text-base font-black text-slate-900">
+                            {leaderboard[1].score.toLocaleString()}
+                          </div>
+                        </div>
+                        <div className="p-2 rounded-xl bg-white border border-slate-200">
+                          <div className="text-[10px] text-slate-400 font-bold uppercase">Accuracy</div>
+                          <div className="text-base font-black text-slate-800">
+                            {leaderboard[1].attemptedQuestions > 0
+                              ? `${Math.round((leaderboard[1].correctAnswers / leaderboard[1].attemptedQuestions) * 100)}%`
+                              : "0%"}
+                          </div>
+                        </div>
+                        <div className="p-2 rounded-xl bg-white border border-slate-200">
+                          <div className="text-[10px] text-slate-400 font-bold uppercase">Coins</div>
+                          <div className="text-base font-black text-slate-800">
+                            {leaderboard[1].currentBalance.toLocaleString()}
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => openAnswerSheet(leaderboard[1])}
+                        className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition cursor-pointer shadow-xs min-h-[38px]"
+                      >
+                        <FileText className="w-3.5 h-3.5" />
+                        <span>Inspect Answer Sheet</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* 1ST PLACE (GOLD) - ELEVATED CENTER */}
+                {leaderboard[0] && (
+                  <div className="order-1 md:order-2 rounded-3xl bg-linear-to-b from-amber-400/20 via-amber-100/40 to-white border-2 border-amber-400 p-6 sm:p-7 shadow-xl ring-2 ring-amber-400/30 flex flex-col justify-between h-[410px] relative transition-transform hover:-translate-y-1">
+                    <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-amber-500 to-yellow-500 text-white text-xs font-black uppercase tracking-wider shadow-md flex items-center gap-1.5">
+                      <Trophy className="w-3.5 h-3.5 fill-current" />
+                      <span>👑 TOURNAMENT CHAMPION</span>
+                    </div>
+
+                    <div className="space-y-3 pt-2">
+                      <div className="flex items-center justify-between">
+                        <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-900 text-xs font-black uppercase tracking-wider border border-amber-300">
+                          🥇 1st Place
+                        </span>
+                        <span className="font-mono text-sm text-amber-700 font-black">#1</span>
+                      </div>
+
+                      <div>
+                        <h3 className="text-2xl sm:text-3xl font-black text-amber-950 truncate">
+                          {leaderboard[0].teamName}
+                        </h3>
+                        <div className="text-xs text-amber-800 font-mono mt-0.5">
+                          Squad Code: {leaderboard[0].teamCode}
+                        </div>
+                      </div>
+
+                      {leaderboard[0].members && leaderboard[0].members.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {leaderboard[0].members.map((m, idx) => (
+                            <span
+                              key={idx}
+                              className="text-xs font-bold text-amber-950 bg-white/90 px-2.5 py-1 rounded-lg border border-amber-200 shadow-2xs"
+                            >
+                              {m}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-3 pt-4 border-t border-amber-200/80">
+                      <div className="grid grid-cols-3 gap-2 text-center font-mono">
+                        <div className="p-2.5 rounded-xl bg-white border border-amber-200 shadow-2xs">
+                          <div className="text-[10px] text-amber-600 font-bold uppercase">Points</div>
+                          <div className="text-lg font-black text-amber-900">
+                            {leaderboard[0].score.toLocaleString()}
+                          </div>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-white border border-amber-200 shadow-2xs">
+                          <div className="text-[10px] text-amber-600 font-bold uppercase">Accuracy</div>
+                          <div className="text-lg font-black text-amber-900">
+                            {leaderboard[0].attemptedQuestions > 0
+                              ? `${Math.round((leaderboard[0].correctAnswers / leaderboard[0].attemptedQuestions) * 100)}%`
+                              : "0%"}
+                          </div>
+                        </div>
+                        <div className="p-2.5 rounded-xl bg-white border border-amber-200 shadow-2xs">
+                          <div className="text-[10px] text-amber-600 font-bold uppercase">Coins</div>
+                          <div className="text-lg font-black text-amber-900">
+                            {leaderboard[0].currentBalance.toLocaleString()}
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => openAnswerSheet(leaderboard[0])}
+                        className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 transition cursor-pointer shadow-md min-h-[42px]"
+                      >
+                        <FileText className="w-4 h-4" />
+                        <span>Inspect Champion Answer Sheet</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* 3RD PLACE (BRONZE) */}
+                {leaderboard[2] && (
+                  <div className="order-3 md:order-3 rounded-3xl bg-linear-to-b from-amber-700/10 via-orange-100/30 to-white border-2 border-amber-600/30 p-5 sm:p-6 shadow-md flex flex-col justify-between h-[370px] relative transition-transform hover:-translate-y-1">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-900 text-[11px] font-black uppercase tracking-wider border border-amber-300 flex items-center gap-1.5">
+                          <Medal className="w-3.5 h-3.5 text-amber-700" />
+                          <span>🥉 3rd Place • 2nd Runner Up</span>
+                        </span>
+                        <span className="font-mono text-xs text-amber-800 font-bold">
+                          #{leaderboard[2].rank}
+                        </span>
+                      </div>
+
+                      <div>
+                        <h3 className="text-xl sm:text-2xl font-black text-amber-950 truncate">
+                          {leaderboard[2].teamName}
+                        </h3>
+                        <div className="text-xs text-amber-800/80 font-mono mt-0.5">
+                          {leaderboard[2].teamCode}
+                        </div>
+                      </div>
+
+                      {leaderboard[2].members && leaderboard[2].members.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {leaderboard[2].members.map((m, idx) => (
+                            <span
+                              key={idx}
+                              className="text-[11px] font-semibold text-amber-900 bg-white px-2 py-0.5 rounded-md border border-amber-200 shadow-2xs"
+                            >
+                              {m}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-3 pt-4 border-t border-amber-200/60">
+                      <div className="grid grid-cols-3 gap-2 text-center font-mono">
+                        <div className="p-2 rounded-xl bg-white border border-slate-200">
+                          <div className="text-[10px] text-slate-400 font-bold uppercase">Score</div>
+                          <div className="text-base font-black text-slate-900">
+                            {leaderboard[2].score.toLocaleString()}
+                          </div>
+                        </div>
+                        <div className="p-2 rounded-xl bg-white border border-slate-200">
+                          <div className="text-[10px] text-slate-400 font-bold uppercase">Accuracy</div>
+                          <div className="text-base font-black text-slate-800">
+                            {leaderboard[2].attemptedQuestions > 0
+                              ? `${Math.round((leaderboard[2].correctAnswers / leaderboard[2].attemptedQuestions) * 100)}%`
+                              : "0%"}
+                          </div>
+                        </div>
+                        <div className="p-2 rounded-xl bg-white border border-slate-200">
+                          <div className="text-[10px] text-slate-400 font-bold uppercase">Coins</div>
+                          <div className="text-base font-black text-slate-800">
+                            {leaderboard[2].currentBalance.toLocaleString()}
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => openAnswerSheet(leaderboard[2])}
+                        className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition cursor-pointer shadow-xs min-h-[38px]"
+                      >
+                        <FileText className="w-3.5 h-3.5" />
+                        <span>Inspect Answer Sheet</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* FULL TOURNAMENT STANDINGS (RANKS 4+) */}
+            {leaderboard.length > 3 && (
+              <div className="space-y-3 pt-6 border-t border-slate-200">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-base font-black text-slate-900 uppercase tracking-wide">
+                    Tournament Finalists Standings
+                  </h3>
+                  <span className="text-xs text-slate-500 font-mono">
+                    {leaderboard.length} Squads Verified
+                  </span>
+                </div>
+
+                <div className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-sm">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-200 bg-slate-50 text-xs font-bold uppercase text-slate-600">
+                          <th className="py-3.5 px-5">Rank</th>
+                          <th className="py-3.5 px-5">Squad</th>
+                          <th className="py-3.5 px-5 text-center">Score</th>
+                          <th className="py-3.5 px-5 text-center">Accuracy</th>
+                          <th className="py-3.5 px-5 text-right">Coins</th>
+                          <th className="py-3.5 px-5 text-right">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {leaderboard.slice(3).map((entry) => (
+                          <tr key={entry.teamId} className="hover:bg-slate-50/70 transition">
+                            <td className="py-3.5 px-5 font-mono text-base font-black text-slate-600">
+                              #{entry.rank}
+                            </td>
+                            <td className="py-3.5 px-5">
+                              <div className="font-bold text-slate-900">{entry.teamName}</div>
+                              <div className="flex items-center flex-wrap gap-1.5 mt-0.5">
+                                <span className="text-xs text-slate-400 font-mono">{entry.teamCode}</span>
+                                {entry.members && entry.members.length > 0 && (
+                                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600 bg-slate-100 px-1.5 py-0.5 rounded">
+                                    <Users className="w-2.5 h-2.5 text-slate-500" />
+                                    {entry.members.join(", ")}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-3.5 px-5 text-center font-mono font-bold text-blue-600">
+                              {entry.score.toLocaleString()} pts
+                            </td>
+                            <td className="py-3.5 px-5 text-center text-xs text-slate-600">
+                              {entry.correctAnswers}/{entry.attemptedQuestions} (
+                              {entry.attemptedQuestions > 0
+                                ? Math.round((entry.correctAnswers / entry.attemptedQuestions) * 100)
+                                : 0}
+                              %)
+                            </td>
+                            <td className="py-3.5 px-5 text-right font-mono font-semibold text-slate-800">
+                              💰 {entry.currentBalance.toLocaleString()}
+                            </td>
+                            <td className="py-3.5 px-5 text-right">
+                              <button
+                                onClick={() => openAnswerSheet(entry)}
+                                className="px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 text-slate-700 text-xs font-bold transition flex items-center gap-1 ml-auto cursor-pointer"
+                              >
+                                <FileText className="w-3 h-3" />
+                                <span>Answer Sheet</span>
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </main>
+
+      {/* ========================================================= */}
+      {/* ANSWER SHEET INSPECTION MODAL */}
+      {/* ========================================================= */}
+      {selectedTeamForSheet && (
+        <div
+          className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6 animate-in fade-in"
+          onClick={() => setSelectedTeamForSheet(null)}
+        >
+          <div
+            className="bg-white border border-slate-200 rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="p-4 sm:p-5 border-b border-slate-200 bg-slate-50/80 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-black shrink-0">
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-black text-slate-900">
+                      {selectedTeamForSheet.teamName}
+                    </h3>
+                    <span className="font-mono text-xs font-bold bg-white px-2 py-0.5 rounded border border-slate-200 text-slate-600">
+                      {selectedTeamForSheet.teamCode}
+                    </span>
+                  </div>
+                  {selectedTeamForSheet.members && selectedTeamForSheet.members.length > 0 && (
+                    <p className="text-xs text-slate-500 font-medium">
+                      Squad: {selectedTeamForSheet.members.join(", ")}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <button
+                onClick={() => setSelectedTeamForSheet(null)}
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Scorecard Summary Stats Bar */}
+            {answerSheetData && (
+              <div className="bg-white border-b border-slate-200 px-4 sm:px-5 py-3 grid grid-cols-2 sm:grid-cols-6 gap-2 text-center font-mono text-xs shrink-0">
+                <div className="p-2 rounded-xl bg-blue-50 border border-blue-200">
+                  <div className="text-[10px] text-blue-600 font-bold uppercase">Points</div>
+                  <div className="text-base font-black text-blue-900">
+                    {answerSheetData.summary.totalPoints.toLocaleString()}
+                  </div>
+                </div>
+                <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-200">
+                  <div className="text-[10px] text-emerald-600 font-bold uppercase">Correct</div>
+                  <div className="text-base font-black text-emerald-900">
+                    {answerSheetData.summary.correct}
+                  </div>
+                </div>
+                <div className="p-2 rounded-xl bg-red-50 border border-red-200">
+                  <div className="text-[10px] text-red-600 font-bold uppercase">Wrong</div>
+                  <div className="text-base font-black text-red-900">
+                    {answerSheetData.summary.incorrect}
+                  </div>
+                </div>
+                <div className="p-2 rounded-xl bg-amber-50 border border-amber-200">
+                  <div className="text-[10px] text-amber-600 font-bold uppercase">Passed</div>
+                  <div className="text-base font-black text-amber-900">
+                    {answerSheetData.summary.passed}
+                  </div>
+                </div>
+                <div className="p-2 rounded-xl bg-slate-50 border border-slate-200">
+                  <div className="text-[10px] text-slate-500 font-bold uppercase">Accuracy</div>
+                  <div className="text-base font-black text-slate-900">
+                    {answerSheetData.summary.accuracyPercent}%
+                  </div>
+                </div>
+                <div className="p-2 rounded-xl bg-slate-50 border border-slate-200">
+                  <div className="text-[10px] text-slate-500 font-bold uppercase">Coins</div>
+                  <div className="text-base font-black text-slate-900">
+                    💰 {answerSheetData.summary.currentBalance.toLocaleString()}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Filter Tabs */}
+            {answerSheetData && (
+              <div className="px-4 sm:px-5 py-2 border-b border-slate-200 bg-slate-50/50 flex items-center gap-1.5 shrink-0 overflow-x-auto">
+                <span className="text-xs font-bold text-slate-500 mr-2 flex items-center gap-1">
+                  <Filter className="w-3.5 h-3.5" />
+                  <span>Filter:</span>
+                </span>
+                {[
+                  { key: "ALL", label: `All (${answerSheetData.items.length})` },
+                  { key: "CORRECT", label: `Correct (${answerSheetData.summary.correct})` },
+                  { key: "INCORRECT", label: `Wrong (${answerSheetData.summary.incorrect})` },
+                  { key: "PASSED", label: `Passed (${answerSheetData.summary.passed})` },
+                ].map((f) => (
+                  <button
+                    key={f.key}
+                    onClick={() => setSheetFilter(f.key as any)}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition cursor-pointer ${
+                      sheetFilter === f.key
+                        ? "bg-blue-600 text-white shadow-xs"
+                        : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Modal Body / Questions List */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+              {sheetLoading && (
+                <div className="py-16 text-center space-y-3">
+                  <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto" />
+                  <p className="text-xs font-semibold text-slate-500">
+                    Retrieving full 40-question scorecard...
+                  </p>
+                </div>
+              )}
+
+              {sheetError && (
+                <div className="p-4 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-center text-xs space-y-2">
+                  <p className="font-bold">{sheetError}</p>
+                  <button
+                    onClick={() => openAnswerSheet(selectedTeamForSheet)}
+                    className="px-3 py-1 rounded-lg bg-red-600 text-white text-xs font-bold"
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
+
+              {answerSheetData && (
+                <div className="space-y-3.5">
+                  {answerSheetData.items
+                    .filter((item: any) => {
+                      if (sheetFilter === "CORRECT") return item.isCorrect === true;
+                      if (sheetFilter === "INCORRECT") return item.isCorrect === false;
+                      if (sheetFilter === "PASSED") return item.isPassed === true;
+                      return true;
+                    })
+                    .map((item: any) => {
+                      return (
+                        <div
+                          key={item.questionId || item.orderIndex}
+                          className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/90 space-y-3"
+                        >
+                          {/* Question Header & Verdict Tag */}
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                              <span className="w-6 h-6 rounded-md bg-blue-600 text-white font-mono font-bold text-xs flex items-center justify-center">
+                                Q{item.orderIndex + 1}
+                              </span>
+                              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200">
+                                {item.category}
+                              </span>
+                            </div>
+
+                            {/* Verdict Pill */}
+                            <div>
+                              {item.isPassed ? (
+                                <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 font-bold text-xs">
+                                  ⚡ Bull&apos;s Pass (Skipped)
+                                </span>
+                              ) : item.isCorrect === true ? (
+                                <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold text-xs flex items-center gap-1">
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                  <span>Correct (+{item.pointsAwarded})</span>
+                                </span>
+                              ) : item.isCorrect === false ? (
+                                <span className="px-2.5 py-0.5 rounded-full bg-red-100 text-red-800 border border-red-300 font-bold text-xs flex items-center gap-1">
+                                  <XCircle className="w-3.5 h-3.5 text-red-600" />
+                                  <span>Wrong ({item.pointsAwarded})</span>
+                                </span>
+                              ) : (
+                                <span className="px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-600 font-bold text-xs">
+                                  Unanswered (0 pts)
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Question Text */}
+                          <p className="text-sm font-bold text-slate-900 leading-snug">
+                            {item.questionText}
+                          </p>
+
+                          {/* Clue thumbnail if available */}
+                          {item.imageUrl && (
+                            <div className="h-28 rounded-xl overflow-hidden border border-slate-200 max-w-xs bg-slate-100">
+                              <img src={item.imageUrl} alt="Clue" className="w-full h-full object-cover" />
+                            </div>
+                          )}
+
+                          {/* 4 Options Grid */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                            {["A", "B", "C", "D"].map((key) => {
+                              const optText = item.options[key];
+                              const wasSelected = item.teamOption === key;
+                              const isCorrectOpt = item.correctOption === key;
+
+                              let optStyle = "bg-white border-slate-200 text-slate-700";
+                              if (wasSelected) {
+                                if (item.isCorrect) {
+                                  optStyle = "bg-emerald-50 border-2 border-emerald-600 text-emerald-950 font-bold";
+                                } else {
+                                  optStyle = "bg-red-50 border-2 border-red-500 text-red-950 font-bold";
+                                }
+                              } else if (isCorrectOpt) {
+                                optStyle = "bg-emerald-50/60 border border-emerald-400 text-emerald-900 font-semibold";
+                              }
+
+                              return (
+                                <div
+                                  key={key}
+                                  className={`p-2.5 rounded-xl border flex items-center justify-between gap-2 ${optStyle}`}
+                                >
+                                  <div className="flex items-center gap-2 truncate">
+                                    <span className="w-5 h-5 rounded flex items-center justify-center font-bold text-[11px] bg-slate-100 shrink-0">
+                                      {key}
+                                    </span>
+                                    <span className="truncate">{optText}</span>
+                                  </div>
+
+                                  {wasSelected && (
+                                    <span className="text-[10px] font-bold uppercase shrink-0 px-1.5 py-0.5 rounded bg-white border">
+                                      {item.isCorrect ? "Picked ✓" : "Picked ✗"}
+                                    </span>
+                                  )}
+                                  {!wasSelected && isCorrectOpt && (
+                                    <span className="text-[10px] font-bold text-emerald-700 uppercase shrink-0">
+                                      Correct
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          {/* Lifelines Used & Explanation */}
+                          <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {item.lifelinesUsed && item.lifelinesUsed.length > 0 && (
+                                <>
+                                  <span className="text-[10px] text-slate-400 font-bold uppercase">
+                                    Lifelines:
+                                  </span>
+                                  {item.lifelinesUsed.map((lt: string) => (
+                                    <span
+                                      key={lt}
+                                      className="px-2 py-0.5 rounded bg-blue-50 border border-blue-200 text-blue-700 font-mono text-[10px] font-bold"
+                                    >
+                                      {lt.replace("_", " ")}
+                                    </span>
+                                  ))}
+                                </>
+                              )}
+                              {item.timeTakenSeconds && (
+                                <span className="text-[10px] text-slate-400 font-mono">
+                                  • Time: {item.timeTakenSeconds}s
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Solution Explanation */}
+                          {item.explanation && (
+                            <div className="p-2.5 rounded-xl bg-emerald-50/70 border border-emerald-200 text-emerald-950 text-xs">
+                              <span className="font-bold text-emerald-800 mr-1.5">Solution:</span>
+                              <span>{item.explanation}</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between shrink-0">
+              <span className="text-xs text-slate-500 font-mono">
+                Verified Championship Audit Log
+              </span>
+              <button
+                onClick={() => setSelectedTeamForSheet(null)}
+                className="px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs uppercase tracking-wider transition cursor-pointer"
+              >
+                Close Sheet
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <footer className="border-t border-slate-200/80 bg-white py-3 px-6 flex items-center justify-between text-xs text-slate-500">
         <span>THE BIG BULL Live Presentation Engine</span>
