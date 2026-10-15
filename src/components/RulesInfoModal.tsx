@@ -72,14 +72,14 @@ export const RulesInfoModal: React.FC<RulesInfoModalProps> = ({ onClose }) => {
                   <div className="w-6 h-6 rounded-md bg-amber-50 text-amber-600 flex items-center justify-center">
                     <Lightbulb className="w-3.5 h-3.5" />
                   </div>
-                  <span className="font-bold text-slate-900 text-xs">💡 Bull&apos;s Hint</span>
+                  <span className="font-bold text-slate-900 text-xs">💡 BULL&apos;S HINT</span>
                 </div>
                 <span className="font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md text-[11px]">
                   500 Coins
                 </span>
               </div>
               <p className="text-[11px] text-slate-600 mt-1 pl-8">
-                Provides a conceptual text clue directly from the host highlighting key formulas or directional logic to guide your answer.
+                A useful hint related to the question will be provided to the team.
               </p>
             </div>
 
@@ -90,14 +90,14 @@ export const RulesInfoModal: React.FC<RulesInfoModalProps> = ({ onClose }) => {
                   <div className="w-6 h-6 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center">
                     <Eye className="w-3.5 h-3.5" />
                   </div>
-                  <span className="font-bold text-slate-900 text-xs">👁️ Vision Boost</span>
+                  <span className="font-bold text-slate-900 text-xs">👁️ VISION BOOST</span>
                 </div>
                 <span className="font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md text-[11px]">
                   1,500 Coins
                 </span>
               </div>
               <p className="text-[11px] text-slate-600 mt-1 pl-8">
-                Transfers the question&apos;s visual chart, candlestick diagram, or financial graphic directly to your individual phone screen.
+                An image or visual clue related to the question will be displayed to help the team.
               </p>
             </div>
 
@@ -108,14 +108,14 @@ export const RulesInfoModal: React.FC<RulesInfoModalProps> = ({ onClose }) => {
                   <div className="w-6 h-6 rounded-md bg-amber-50 text-amber-500 flex items-center justify-center">
                     <Zap className="w-3.5 h-3.5" />
                   </div>
-                  <span className="font-bold text-slate-900 text-xs">⚡ 50:50 Blast</span>
+                  <span className="font-bold text-slate-900 text-xs">⚡ 50-50 BLAST</span>
                 </div>
                 <span className="font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md text-[11px]">
                   2,000 Coins
                 </span>
               </div>
               <p className="text-[11px] text-slate-600 mt-1 pl-8">
-                Instantly eliminates 2 incorrect options from your terminal, leaving you with only 2 choices (50% odds).
+                Two incorrect options will be eliminated, leaving only two options to choose from.
               </p>
             </div>
 
@@ -126,53 +126,35 @@ export const RulesInfoModal: React.FC<RulesInfoModalProps> = ({ onClose }) => {
                   <div className="w-6 h-6 rounded-md bg-emerald-50 text-emerald-600 flex items-center justify-center">
                     <FastForward className="w-3.5 h-3.5" />
                   </div>
-                  <span className="font-bold text-slate-900 text-xs">⏩ Bull&apos;s Pass</span>
+                  <span className="font-bold text-slate-900 text-xs">⏩ BULL&apos;S PASS</span>
                 </div>
                 <span className="font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md text-[11px]">
                   2,500 Coins
                 </span>
               </div>
               <p className="text-[11px] text-slate-600 mt-1 pl-8">
-                Safely skip this question with zero penalty and zero negative marking. Protects your points when unsure.
+                The team can skip the current question and move on to the next question.
               </p>
             </div>
           </div>
 
-          {/* Competition Rules & 3-Strike Security */}
+          {/* Rules & Regulations */}
           <div className="space-y-2 pt-2 border-t border-slate-100">
             <div className="text-[11px] font-bold uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
-              <ShieldAlert className="w-3.5 h-3.5 text-red-600" />
-              <span>Competition Security & Rules</span>
+              <ShieldAlert className="w-3.5 h-3.5 text-blue-600" />
+              <span>Rules & Regulations</span>
             </div>
 
-            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-2 text-[11px]">
-              <div className="flex items-start gap-2">
-                <Clock className="w-3.5 h-3.5 text-blue-600 mt-0.5 shrink-0" />
-                <span>
-                  <strong>2-Minute Live Timer (120s):</strong> Each round lasts exactly 120 seconds synchronized across the central SmartBoard and student terminals.
-                </span>
-              </div>
-
-              <div className="flex items-start gap-2">
-                <Lock className="w-3.5 h-3.5 text-blue-600 mt-0.5 shrink-0" />
-                <span>
-                  <strong>One-Lock Finality:</strong> Any option locked or pass triggered is irreversible. Choose with precision.
-                </span>
-              </div>
-
-              <div className="flex items-start gap-2">
-                <Award className="w-3.5 h-3.5 text-amber-600 mt-0.5 shrink-0" />
-                <span>
-                  <strong>Official Tie-Breaker Protocol:</strong> When total points are equal, ranking is decided by: (1) Highest Correct Answers, (2) Fewest Lifelines Used, (3) Highest Coin Balance.
-                </span>
-              </div>
-
-              <div className="flex items-start gap-2 text-red-700">
-                <ShieldAlert className="w-3.5 h-3.5 text-red-600 mt-0.5 shrink-0" />
-                <span>
-                  <strong>Strict 3-Strike Policy:</strong> Leaving full screen, minimizing the app, switching tabs, or screenshotting triggers a strike. <strong>3rd Strike = Automatic Disqualification</strong>.
-                </span>
-              </div>
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5 text-[11px] text-slate-700">
+              <p>• <strong>Team Size:</strong> Each team will consist of 2–3 members.</p>
+              <p>• <strong>Starting Balance:</strong> Every team receives 5,000 coins at the beginning.</p>
+              <p>• All teams will be seated separately.</p>
+              <p>• Every question is displayed simultaneously on the main screen for all teams.</p>
+              <p>• Teams must discuss and submit their answer within the 120s time limit.</p>
+              <p>• Lifelines can be purchased only using available coins (insufficient coins = cannot purchase).</p>
+              <p>• Categories: General Knowledge, Space, Basic Technical Concepts, Science and Technology, Logical Thinking.</p>
+              <p>• Teams must maintain their remaining coin balance throughout the game.</p>
+              <p className="text-blue-700 font-semibold">• <strong>Winner Determination:</strong> Decided by most correct answers. Ties broken by fewest lifelines used, then highest remaining coins.</p>
             </div>
           </div>
         </div>

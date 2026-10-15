@@ -276,7 +276,7 @@ describe("THE BIG BULL - Comprehensive Game Rules & Security Tests", () => {
     expect(res.correctOption).toBe(correctOpt);
 
     const afterCorrect = await store.getTeamById(teamCorrect!.id);
-    expect(afterCorrect?.score).toBe(1000); // Default reward: 1000
+    expect(afterCorrect?.score).toBe(1); // 1 point per correct answer
     expect(afterCorrect?.correctAnswers).toBe(1);
 
     const afterWrong = await store.getTeamById(teamWrong!.id);

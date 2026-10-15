@@ -1011,8 +1011,8 @@ export class DemoStore implements StorageEngine {
       status: "LOBBY",
       currentQuestionIndex: 0,
       totalQuestions: questionList.length,
-      correctReward: options?.correctReward ?? 1000,
-      incorrectPenalty: options?.incorrectPenalty ?? 200,
+      correctReward: options?.correctReward ?? 1,
+      incorrectPenalty: options?.incorrectPenalty ?? 0,
       unansweredPenalty: options?.unansweredPenalty ?? 0,
       defaultQuestionDuration: options?.defaultQuestionDuration ?? 120,
       oneActiveSessionPerTeam: options?.oneActiveSessionPerTeam ?? true,
@@ -1284,8 +1284,8 @@ export class DemoStore implements StorageEngine {
 
     const question = this.questions.get(gq.questionId);
     const isCorrect = question ? opt === question.correctOption.trim().toUpperCase() : false;
-    const reward = this.game?.correctReward ?? 1000;
-    const penalty = this.game?.incorrectPenalty ?? 200;
+    const reward = this.game?.correctReward ?? 1;
+    const penalty = this.game?.incorrectPenalty ?? 0;
     const pointsAwarded = isCorrect ? reward : -penalty;
 
     const answerRecord: TeamAnswerRecord = {
@@ -1452,10 +1452,10 @@ export class DemoStore implements StorageEngine {
         isCorrect = q ? ans.selectedOption.toUpperCase() === q.correctOption.toUpperCase() : false;
         if (isCorrect) {
           correct++;
-          pointsAwarded = ans.pointsAwarded || (this.game?.correctReward ?? 1000);
+          pointsAwarded = ans.pointsAwarded !== undefined ? ans.pointsAwarded : (this.game?.correctReward ?? 1);
         } else {
           incorrect++;
-          pointsAwarded = ans.pointsAwarded || -(this.game?.incorrectPenalty ?? 200);
+          pointsAwarded = 0;
         }
       }
 
@@ -1535,8 +1535,8 @@ export class DemoStore implements StorageEngine {
     const correctOption = fullQuestion.correctOption;
     gq.status = "REVEALED";
 
-    const correctReward = this.game?.correctReward ?? 1000;
-    const incorrectPenalty = this.game?.incorrectPenalty ?? 200;
+    const correctReward = this.game?.correctReward ?? 1;
+    const incorrectPenalty = this.game?.incorrectPenalty ?? 0;
     const unansweredPenalty = this.game?.unansweredPenalty ?? 0;
 
     const prismaUpdates: Promise<any>[] = [];

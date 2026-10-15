@@ -482,7 +482,7 @@ export default function TeamTerminalPage() {
       const isCorrect = payload?.isCorrect ?? payload?.answer?.isCorrect;
       const correctOption = payload?.correctOption ?? payload?.answer?.correctOption;
       const explanation = payload?.explanation ?? payload?.answer?.explanation;
-      const pointsAwarded = payload?.answer?.pointsAwarded ?? (isCorrect ? 1000 : -200);
+      const pointsAwarded = payload?.answer?.pointsAwarded ?? (isCorrect ? 1 : 0);
 
       setSelectedOption(option);
       setPrivateState((prev) => ({
@@ -508,7 +508,7 @@ export default function TeamTerminalPage() {
       if (team) {
         setTeam((prev) => {
           if (!prev) return prev;
-          const scoreDelta = isCorrect ? 1000 : -200;
+          const scoreDelta = isCorrect ? 1 : 0;
           return {
             ...prev,
             score: Math.max(0, (prev.score || 0) + scoreDelta),
@@ -797,14 +797,14 @@ export default function TeamTerminalPage() {
                     <div className="flex items-center justify-between mb-1">
                       <span className="font-bold text-slate-900 text-[11px] flex items-center gap-1">
                         <Lightbulb className="w-3.5 h-3.5 text-amber-500" />
-                        <span>Bull&apos;s Hint</span>
+                        <span>BULL&apos;S HINT</span>
                       </span>
                       <span className="font-mono font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded text-[10px]">
-                        500 C
+                        500 Coins
                       </span>
                     </div>
                     <p className="text-[10.5px] text-slate-600 leading-snug">
-                      Unlocks an insider conceptual clue from the host pointing you toward the core formula or logic.
+                      A useful hint related to the question will be provided to the team.
                     </p>
                   </div>
 
@@ -813,14 +813,14 @@ export default function TeamTerminalPage() {
                     <div className="flex items-center justify-between mb-1">
                       <span className="font-bold text-slate-900 text-[11px] flex items-center gap-1">
                         <Eye className="w-3.5 h-3.5 text-blue-600" />
-                        <span>Vision Boost</span>
+                        <span>VISION BOOST</span>
                       </span>
                       <span className="font-mono font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded text-[10px]">
-                        1,500 C
+                        1,500 Coins
                       </span>
                     </div>
                     <p className="text-[10.5px] text-slate-600 leading-snug">
-                      Displays the question&apos;s chart, candlestick diagram, or financial infographic on your mobile screen.
+                      An image or visual clue related to the question will be displayed to help the team.
                     </p>
                   </div>
 
@@ -829,14 +829,14 @@ export default function TeamTerminalPage() {
                     <div className="flex items-center justify-between mb-1">
                       <span className="font-bold text-slate-900 text-[11px] flex items-center gap-1">
                         <Zap className="w-3.5 h-3.5 text-amber-500" />
-                        <span>50:50 Blast</span>
+                        <span>50-50 BLAST</span>
                       </span>
                       <span className="font-mono font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded text-[10px]">
-                        2,000 C
+                        2,000 Coins
                       </span>
                     </div>
                     <p className="text-[10.5px] text-slate-600 leading-snug">
-                      Eliminates 2 wrong choices from your terminal, raising your probability of winning to 50%.
+                      Two incorrect options will be eliminated, leaving only two options to choose from.
                     </p>
                   </div>
 
@@ -845,14 +845,14 @@ export default function TeamTerminalPage() {
                     <div className="flex items-center justify-between mb-1">
                       <span className="font-bold text-slate-900 text-[11px] flex items-center gap-1">
                         <FastForward className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>Bull&apos;s Pass</span>
+                        <span>BULL&apos;S PASS</span>
                       </span>
                       <span className="font-mono font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded text-[10px]">
-                        2,500 C
+                        2,500 Coins
                       </span>
                     </div>
                     <p className="text-[10.5px] text-slate-600 leading-snug">
-                      Safely skips the question with zero penalty and zero negative marking to protect your score.
+                      The team can skip the current question and move on to the next question.
                     </p>
                   </div>
                 </div>
@@ -1408,14 +1408,14 @@ export default function TeamTerminalPage() {
                       {hasLockedEval && isLocked && isLockedCorrect && (
                         <div className="flex items-center gap-1 text-[10px] font-black text-emerald-100 uppercase shrink-0 ml-1">
                           <CheckCircle2 className="w-3.5 h-3.5 text-white" />
-                          <span>Correct (+1,000)</span>
+                          <span>Correct ✓</span>
                         </div>
                       )}
 
                       {hasLockedEval && isLocked && isLockedIncorrect && (
                         <div className="flex items-center gap-1 text-[10px] font-black text-red-100 uppercase shrink-0 ml-1">
                           <XCircle className="w-3.5 h-3.5 text-white" />
-                          <span>Wrong (-200)</span>
+                          <span>Incorrect ✗</span>
                         </div>
                       )}
 
@@ -1473,7 +1473,7 @@ export default function TeamTerminalPage() {
                       <div className="flex items-center justify-between font-bold">
                         <div className="flex items-center gap-1.5 text-emerald-700">
                           <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                          <span>Correct Answer! (+1,000 Points Added)</span>
+                          <span>Correct Answer!</span>
                         </div>
                         <span className="text-[10px] font-mono text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-200">
                           Locked [{lockedAnswer.selectedOption}]
@@ -1490,7 +1490,7 @@ export default function TeamTerminalPage() {
                       <div className="flex items-center justify-between font-bold">
                         <div className="flex items-center gap-1.5 text-red-700">
                           <XCircle className="w-4 h-4 text-red-600 shrink-0" />
-                          <span>Incorrect Selection (-200 Points)</span>
+                          <span>Incorrect Selection</span>
                         </div>
                         <span className="text-[10px] font-mono text-red-800 bg-red-100 px-1.5 py-0.5 rounded border border-red-200">
                           Correct: Option {lockedAnswer.correctOption || "—"}

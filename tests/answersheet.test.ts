@@ -39,7 +39,7 @@ describe("THE BIG BULL - Immediate Feedback & Answer Sheet Verification", () => 
     expect(correctRes.isCorrect).toBe(true);
     expect(correctRes.correctOption).toBe(q!.correctOption);
     expect(correctRes.explanation).toBe(q!.explanation);
-    expect(correctRes.answer?.pointsAwarded).toBe(1000);
+    expect(correctRes.answer?.pointsAwarded).toBe(1);
   });
 
   it("should generate a complete 40-question answer sheet for any team", async () => {

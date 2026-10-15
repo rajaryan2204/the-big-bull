@@ -1342,9 +1342,9 @@ export default function SmartBoardPage() {
             {answerSheetData && (
               <div className="bg-white border-b border-slate-200 px-4 sm:px-5 py-3 grid grid-cols-2 sm:grid-cols-6 gap-2 text-center font-mono text-xs shrink-0">
                 <div className="p-2 rounded-xl bg-blue-50 border border-blue-200">
-                  <div className="text-[10px] text-blue-600 font-bold uppercase">Points</div>
+                  <div className="text-[10px] text-blue-600 font-bold uppercase">Score</div>
                   <div className="text-base font-black text-blue-900">
-                    {answerSheetData.summary.totalPoints.toLocaleString()}
+                    {answerSheetData.summary.correct} / {answerSheetData.summary.totalQuestions}
                   </div>
                 </div>
                 <div className="p-2 rounded-xl bg-emerald-50 border border-emerald-200">
@@ -1466,16 +1466,16 @@ export default function SmartBoardPage() {
                               ) : item.isCorrect === true ? (
                                 <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold text-xs flex items-center gap-1">
                                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                                  <span>Correct (+{item.pointsAwarded})</span>
+                                  <span>Correct</span>
                                 </span>
                               ) : item.isCorrect === false ? (
                                 <span className="px-2.5 py-0.5 rounded-full bg-red-100 text-red-800 border border-red-300 font-bold text-xs flex items-center gap-1">
                                   <XCircle className="w-3.5 h-3.5 text-red-600" />
-                                  <span>Wrong ({item.pointsAwarded})</span>
+                                  <span>Incorrect</span>
                                 </span>
                               ) : (
                                 <span className="px-2.5 py-0.5 rounded-full bg-slate-200 text-slate-600 font-bold text-xs">
-                                  Unanswered (0 pts)
+                                  Unanswered
                                 </span>
                               )}
                             </div>
