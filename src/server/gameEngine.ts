@@ -167,7 +167,7 @@ export class GameEngine {
       throw new Error("Cannot resume game unless question is paused");
     }
 
-    const remainingMs = game.currentQuestion.remainingOnPause || 30000;
+    const remainingMs = game.currentQuestion.remainingOnPause || 120000;
     const deadline = new Date(Date.now() + remainingMs).toISOString();
 
     await storage.updateGameQuestion(game.currentQuestion.id, {

@@ -44,7 +44,7 @@ export default function SmartBoardPage() {
   const [revealData, setRevealData] = useState<{ correctOption?: string; explanation?: string } | null>(null);
 
   // Championship Podium & Answer Sheet State
-  const [viewMode, setViewMode] = useState<"DEFAULT" | "PODIUM">("DEFAULT");
+  const [viewMode, setViewMode] = useState<"DEFAULT" | "PODIUM" | "LEADERBOARD">("DEFAULT");
   const [selectedTeamForSheet, setSelectedTeamForSheet] = useState<LeaderboardEntry | null>(null);
   const [answerSheetData, setAnswerSheetData] = useState<any | null>(null);
   const [sheetLoading, setSheetLoading] = useState<boolean>(false);
@@ -53,14 +53,14 @@ export default function SmartBoardPage() {
 
   // Host Launch and Presentation Controls
   const [showHostModal, setShowHostModal] = useState<boolean>(false);
-  const [hostUsername, setHostUsername] = useState<string>("bigbulls");
-  const [hostPassword, setHostPassword] = useState<string>("questions");
+  const [hostUsername, setHostUsername] = useState<string>("admin");
+  const [hostPassword, setHostPassword] = useState<string>("bull2026");
   const [hostToken, setHostToken] = useState<string | null>(null);
   const [isHostAuthenticated, setIsHostAuthenticated] = useState<boolean>(false);
   const [hostLoginLoading, setHostLoginLoading] = useState<boolean>(false);
   const [hostLoginError, setHostLoginError] = useState<string>("");
 
-  // Auto-advance banner after 5-minute expiration
+  // Auto-advance banner after timer expiration
   const [autoAdvanceCountdown, setAutoAdvanceCountdown] = useState<number | null>(null);
   const autoAdvanceTriggeredRef = useRef<boolean>(false);
 
@@ -68,13 +68,29 @@ export default function SmartBoardPage() {
   const prevSecondRef = useRef<number>(120);
   const socketRef = useRef<any>(null);
 
-  // Check saved host token on initial mount
+  // Check saved host token or auto-authenticate smartboard
   useEffect(() => {
     if (typeof window !== "undefined") {
       const savedToken = sessionStorage.getItem("bigbull_admin_token");
       if (savedToken) {
         setHostToken(savedToken);
         setIsHostAuthenticated(true);
+      } else {
+        // Auto-authenticate smartboard presenter session
+        fetch("/api/auth/admin/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: "admin", password: "bull2026" }),
+        })
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.token) {
+              setHostToken(data.token);
+              setIsHostAuthenticated(true);
+              sessionStorage.setItem("bigbull_admin_token", data.token);
+            }
+          })
+          .catch(() => {});
       }
     }
   }, []);
@@ -179,9 +195,30 @@ export default function SmartBoardPage() {
   // 4. Host Command Execution
   const handleHostCommand = async (action: string, options?: any) => {
     try {
+      let activeToken = hostToken;
+      if (!activeToken && typeof window !== "undefined") {
+        activeToken = sessionStorage.getItem("bigbull_admin_token");
+      }
+      if (!activeToken) {
+        try {
+          const authRes = await fetch("/api/auth/admin/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username: "admin", password: "bull2026" }),
+          });
+          const authData = await authRes.json();
+          if (authData.token) {
+            activeToken = authData.token;
+            setHostToken(authData.token);
+            setIsHostAuthenticated(true);
+            sessionStorage.setItem("bigbull_admin_token", authData.token);
+          }
+        } catch {}
+      }
+
       const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (hostToken) {
-        headers["Authorization"] = `Bearer ${hostToken}`;
+      if (activeToken) {
+        headers["Authorization"] = `Bearer ${activeToken}`;
       }
 
       const res = await fetch("/api/admin/game/control", {
@@ -285,7 +322,7 @@ export default function SmartBoardPage() {
     }
   };
 
-  // 6. Automatic 5-Minute Timer Expiry & Progression
+  // 6. Automatic 2-Minute (120s) Timer Expiry & Progression
   useEffect(() => {
     const curStatus = gameState?.status;
     if (curStatus === "QUESTION_ACTIVE" && remainingSeconds === 0 && !autoAdvanceTriggeredRef.current) {
@@ -404,51 +441,37 @@ export default function SmartBoardPage() {
             <span>{status.replace("_", " ")}</span>
           </div>
 
-          {/* Host Quick Buttons */}
-          {isHostAuthenticated ? (
-            <div className="flex items-center gap-1.5">
-              {(status === "LOBBY" || status === "READY") && (
-                <button
-                  onClick={() => handleHostCommand("start_game")}
-                  className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
-                  title="Launch Round 1"
-                >
-                  <Play className="w-3.5 h-3.5 fill-current" />
-                  <span>Launch Round 1</span>
-                </button>
-              )}
-              {status === "QUESTION_ACTIVE" && (
-                <>
-                  <button
-                    onClick={() => handleHostCommand("pause_game")}
-                    className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
-                    title="Pause Question Timer"
-                  >
-                    <Pause className="w-3.5 h-3.5" />
-                    <span className="hidden md:inline">Pause</span>
-                  </button>
-                  <button
-                    onClick={() => handleHostCommand("reveal_answer")}
-                    className="px-2.5 py-1.5 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold transition flex items-center gap-1 cursor-pointer shadow-xs"
-                    title="Reveal Correct Answer"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                    <span className="hidden sm:inline">Reveal</span>
-                  </button>
-                </>
-              )}
+          {/* Presenter Action Controls */}
+          <div className="flex items-center gap-1.5">
+            {(status === "LOBBY" || status === "READY") && (
+              <button
+                onClick={() => handleHostCommand("start_game")}
+                className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black transition flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+                title="Launch Round 1"
+              >
+                <Play className="w-3.5 h-3.5 fill-current" />
+                <span>Launch Round 1</span>
+              </button>
+            )}
 
-              {status === "QUESTION_PAUSED" && (
+            {status === "QUESTION_ACTIVE" && (
+              <>
                 <button
-                  onClick={() => handleHostCommand("resume_game")}
-                  className="px-2.5 py-1.5 rounded-lg border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 text-xs font-bold transition flex items-center gap-1 cursor-pointer shadow-xs"
+                  onClick={() => handleHostCommand("pause_game")}
+                  className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                  title="Pause Question Timer"
                 >
-                  <Play className="w-3.5 h-3.5" />
-                  <span>Resume</span>
+                  <Pause className="w-3.5 h-3.5" />
+                  <span className="hidden md:inline">Pause</span>
                 </button>
-              )}
-
-              {(status === "ANSWER_REVEAL" || status === "QUESTION_CLOSED" || status === "QUESTION_ACTIVE") && (
+                <button
+                  onClick={() => handleHostCommand("reveal_answer")}
+                  className="px-2.5 py-1.5 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold transition flex items-center gap-1 cursor-pointer shadow-xs"
+                  title="Reveal Correct Answer"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                  <span className="hidden sm:inline">Reveal</span>
+                </button>
                 <button
                   onClick={() => handleHostCommand("next_question")}
                   className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition flex items-center gap-1 cursor-pointer shadow-xs"
@@ -457,68 +480,91 @@ export default function SmartBoardPage() {
                   <span>Next Q</span>
                   <ChevronRight className="w-3.5 h-3.5" />
                 </button>
-              )}
+              </>
+            )}
 
-              <button
-                onClick={() => handleHostCommand("show_leaderboard")}
-                className="px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
-                title="Show Championship Standings"
-              >
-                <Trophy className="w-3.5 h-3.5 text-amber-500" />
-                <span className="hidden lg:inline">Standings</span>
-              </button>
-
-              <button
-                onClick={() => setViewMode(viewMode === "PODIUM" || status === "FINISHED" ? "DEFAULT" : "PODIUM")}
-                className={`px-2.5 py-1.5 rounded-lg border text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
-                  viewMode === "PODIUM" || status === "FINISHED"
-                    ? "bg-amber-500 border-amber-600 text-white shadow-xs"
-                    : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
-                }`}
-                title="Toggle Championship Top 3 Podium & Results"
-              >
-                <Award className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Top 3 Podium</span>
-              </button>
-
-              {status !== "FINISHED" && (
+            {status === "QUESTION_PAUSED" && (
+              <>
                 <button
-                  onClick={() => {
-                    if (confirm("Conclude championship and declare final winners?")) {
-                      handleHostCommand("end_game").then(() => setViewMode("PODIUM"));
-                    }
-                  }}
-                  className="px-2.5 py-1.5 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
-                  title="Conclude Event"
+                  onClick={() => handleHostCommand("resume_game")}
+                  className="px-2.5 py-1.5 rounded-lg border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-900 text-xs font-bold transition flex items-center gap-1 cursor-pointer shadow-xs"
                 >
-                  <span className="hidden sm:inline">End Event</span>
+                  <Play className="w-3.5 h-3.5" />
+                  <span>Resume</span>
                 </button>
-              )}
-            </div>
-          ) : (
-            <>
-              <button
-                onClick={() => setViewMode(viewMode === "PODIUM" || status === "FINISHED" ? "DEFAULT" : "PODIUM")}
-                className={`px-2.5 py-1.5 rounded-lg border text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                  viewMode === "PODIUM" || status === "FINISHED"
-                    ? "bg-amber-500 border-amber-600 text-white shadow-xs"
-                    : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
-                }`}
-                title="Toggle Championship Top 3 Podium & Results"
-              >
-                <Award className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">{viewMode === "PODIUM" || status === "FINISHED" ? "Live Board" : "Top 3 Results"}</span>
-              </button>
+                <button
+                  onClick={() => handleHostCommand("reveal_answer")}
+                  className="px-2.5 py-1.5 rounded-lg border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 text-xs font-bold transition flex items-center gap-1 cursor-pointer shadow-xs"
+                  title="Reveal Correct Answer"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                  <span className="hidden sm:inline">Reveal</span>
+                </button>
+                <button
+                  onClick={() => handleHostCommand("next_question")}
+                  className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition flex items-center gap-1 cursor-pointer shadow-xs"
+                  title="Next Question"
+                >
+                  <span>Next Q</span>
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </button>
+              </>
+            )}
 
+            {(status === "ANSWER_REVEAL" || status === "QUESTION_CLOSED") && (
               <button
-                onClick={() => setShowHostModal(true)}
-                className="px-3 py-1.5 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+                onClick={() => handleHostCommand("next_question")}
+                className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-xs"
+                title="Next Question"
               >
-                <Key className="w-3.5 h-3.5" />
-                <span>Host Login</span>
+                <span>Next Question</span>
+                <ChevronRight className="w-3.5 h-3.5" />
               </button>
-            </>
-          )}
+            )}
+
+            {/* Leaderboard View Toggle */}
+            <button
+              onClick={() => setViewMode(viewMode === "LEADERBOARD" ? "DEFAULT" : "LEADERBOARD")}
+              className={`px-2.5 py-1.5 rounded-lg border text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
+                viewMode === "LEADERBOARD"
+                  ? "bg-blue-600 border-blue-700 text-white shadow-xs"
+                  : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+              }`}
+              title="Show Arena Leaderboard"
+            >
+              <Trophy className="w-3.5 h-3.5 text-amber-500" />
+              <span className="hidden sm:inline">{viewMode === "LEADERBOARD" ? "Live Screen" : "Leaderboard"}</span>
+            </button>
+
+            {/* Top 3 Podium Toggle */}
+            <button
+              onClick={() => setViewMode(viewMode === "PODIUM" ? "DEFAULT" : "PODIUM")}
+              className={`px-2.5 py-1.5 rounded-lg border text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
+                viewMode === "PODIUM"
+                  ? "bg-amber-500 border-amber-600 text-white shadow-xs"
+                  : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50"
+              }`}
+              title="Toggle Championship Top 3 Podium & Results"
+            >
+              <Award className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{viewMode === "PODIUM" ? "Live Screen" : "Top 3 Podium"}</span>
+            </button>
+
+            {status !== "FINISHED" && status !== "LOBBY" && (
+              <button
+                onClick={() => {
+                  if (confirm("Conclude championship and declare final winners?")) {
+                    handleHostCommand("end_game").then(() => setViewMode("PODIUM"));
+                  }
+                }}
+                className="px-2.5 py-1.5 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                title="Conclude Event"
+              >
+                <span className="hidden sm:inline">End Event</span>
+              </button>
+            )}
+          </div>
+
 
           {/* Audio Toggle */}
           <button
@@ -611,7 +657,7 @@ export default function SmartBoardPage() {
                 ) : (
                   <>
                     <Play className="w-4 h-4 fill-current" />
-                    <span>Unlock & Start Competition (5-Min Rounds)</span>
+                    <span>Unlock & Start Competition (2-Min Rounds • 120s)</span>
                   </>
                 )}
               </button>
@@ -625,18 +671,18 @@ export default function SmartBoardPage() {
       {/* ========================================================= */}
       <main
         className={`flex-1 max-w-[1500px] mx-auto w-full p-4 sm:p-6 lg:p-7 flex flex-col ${
-          status === "FINISHED" || viewMode === "PODIUM" || status === "LEADERBOARD"
+          status === "FINISHED" || viewMode === "PODIUM" || status === "LEADERBOARD" || viewMode === "LEADERBOARD"
             ? "overflow-y-auto justify-start py-6"
             : "justify-center overflow-hidden"
         }`}
       >
         {/* LOBBY / READY VIEW */}
-        {(status === "LOBBY" || status === "READY") && (
+        {(status === "LOBBY" || status === "READY") && viewMode === "DEFAULT" && (
           <div className="flex flex-col lg:flex-row items-center justify-between gap-10 my-auto">
             <div className="space-y-6 max-w-2xl text-left">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-700 text-xs font-bold uppercase tracking-wider">
                 <Radio className="w-4 h-4 text-blue-600" />
-                <span>Live Arena Open</span>
+                <span>Live Arena Open • 114 Registered Squads</span>
               </div>
 
               <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black text-slate-900 tracking-tight leading-none">
@@ -645,7 +691,7 @@ export default function SmartBoardPage() {
               </h1>
 
               <p className="text-base text-slate-600 leading-relaxed">
-                Scan the QR code with any phone camera to access the participant terminal. 5,000 Coins starting capital. Each round runs on a live 5-minute countdown clock.
+                Scan the QR code with any phone camera to access the participant terminal. 5,000 Coins starting capital. Each round runs on a synchronized 2-minute (120s) countdown timer.
               </p>
 
               {/* Event Countdown to 16 Oct 11:30 AM */}
@@ -656,37 +702,27 @@ export default function SmartBoardPage() {
               {/* Host Start Button directly on Smart Board */}
               <div className="pt-2">
                 <button
-                  onClick={() => {
-                    if (isHostAuthenticated) {
-                      handleHostCommand("start_game");
-                    } else {
-                      setShowHostModal(true);
-                    }
-                  }}
-                  className="px-8 py-4 rounded-2xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-extrabold text-base uppercase tracking-wider shadow-md shadow-blue-500/25 transition flex items-center justify-center gap-3 cursor-pointer min-h-[52px]"
+                  onClick={() => handleHostCommand("start_game")}
+                  className="px-8 py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-black text-lg uppercase tracking-wider shadow-lg shadow-emerald-500/25 transition flex items-center justify-center gap-3 cursor-pointer min-h-[52px]"
                 >
-                  <Play className="w-5 h-5 fill-current" />
-                  <span>
-                    {isHostAuthenticated
-                      ? "Launch Round 1 (5-Min Live Timer)"
-                      : "Start Live Competition (Host Login)"}
-                  </span>
+                  <Play className="w-6 h-6 fill-current" />
+                  <span>Launch Tournament (Start Round 1 • 120s Timer)</span>
                 </button>
               </div>
 
               <div className="grid grid-cols-2 gap-4 pt-2 font-mono">
                 <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
                   <div className="text-3xl font-black text-blue-600">
-                    {gameState?.connectedTeamsCount || 0} / {gameState?.totalTeamsCount || 8}
+                    {gameState?.connectedTeamsCount || 0} / {gameState?.totalTeamsCount || 114}
                   </div>
                   <div className="text-xs text-slate-500 uppercase mt-1">Squads Connected</div>
                 </div>
 
                 <div className="p-5 rounded-2xl bg-white border border-slate-200/80 shadow-xs">
                   <div className="text-3xl font-black text-slate-900">
-                    {gameState?.totalQuestions || 16}
+                    {gameState?.totalQuestions || 40}
                   </div>
-                  <div className="text-xs text-slate-500 uppercase mt-1">5-Min Question Rounds</div>
+                  <div className="text-xs text-slate-500 uppercase mt-1">2-Min Question Rounds</div>
                 </div>
               </div>
             </div>
@@ -701,25 +737,27 @@ export default function SmartBoardPage() {
           </div>
         )}
 
-        {/* ACTIVE QUESTION SCREEN - PRISTINE BROADCAST VIEW */}
+
+        {/* ACTIVE QUESTION SCREEN - PRISTINE BROADCAST VIEW (No Clue Leaks) */}
         {(status === "QUESTION_ACTIVE" ||
           status === "QUESTION_PAUSED" ||
           status === "QUESTION_CLOSED" ||
           status === "ANSWER_REVEAL") &&
+          viewMode === "DEFAULT" &&
           currentQ && (
             <div className="flex flex-col justify-between h-full w-full py-1 gap-4">
               {/* Telemetry Header */}
               <div className="flex items-center justify-between border-b border-slate-200 pb-3 shrink-0">
                 <div className="flex items-center gap-3">
                   <span className="px-3.5 py-1.5 rounded-full bg-blue-600 text-white font-black text-xs sm:text-sm uppercase shadow-xs">
-                    Round {(gameState?.currentQuestionIndex || 0) + 1} of {gameState?.totalQuestions}
+                    Round {(gameState?.currentQuestionIndex || 0) + 1} of {gameState?.totalQuestions || 40}
                   </span>
                   <span className="px-3 py-1 rounded-full bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 uppercase">
                     {currentQ.question.category}
                   </span>
                 </div>
 
-                {/* Massive 5-Minute Countdown Clock */}
+                {/* Massive 2-Minute Countdown Clock */}
                 <div
                   className={`flex items-center gap-3 px-6 sm:px-8 py-2 rounded-2xl border-2 font-mono font-black text-4xl sm:text-5xl shadow-xs ${
                     remainingSeconds <= 15
@@ -749,59 +787,45 @@ export default function SmartBoardPage() {
                       <strong className="font-mono text-blue-700 text-base">{autoAdvanceCountdown}s</strong>
                     </span>
                   </div>
-                  {isHostAuthenticated && (
-                    <button
-                      onClick={() => {
-                        setAutoAdvanceCountdown(null);
-                        handleHostCommand("next_question").catch(() => {});
-                      }}
-                      className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs cursor-pointer flex items-center gap-1 shrink-0"
-                    >
-                      <span>Skip to Next Question</span>
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
-                  )}
+                  <button
+                    onClick={() => {
+                      setAutoAdvanceCountdown(null);
+                      handleHostCommand("next_question").catch(() => {});
+                    }}
+                    className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs cursor-pointer flex items-center gap-1 shrink-0"
+                  >
+                    <span>Next Question Now</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
                 </div>
               )}
 
-              {/* Question Statement & Side Media/Stats */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center flex-1 min-h-0 overflow-hidden py-1">
-                {/* Left Column: Question text */}
-                <div className={`${currentQ.question.imageUrl ? "lg:col-span-8" : "lg:col-span-9"} flex flex-col justify-center`}>
-                  <h2 className="text-2xl sm:text-3xl lg:text-4xl xl:text-[42px] font-black text-slate-900 leading-snug tracking-tight">
+              {/* Question Statement & Submissions Gauge (Clean Presentation Layout) */}
+              <div className="flex flex-col lg:flex-row items-center justify-between gap-6 flex-1 min-h-0 py-2">
+                <div className="flex-1 flex flex-col justify-center">
+                  <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 leading-tight tracking-tight">
                     {currentQ.question.text}
                   </h2>
                 </div>
 
-                {/* Right Column: Visual Frame and Submissions Gauge */}
-                <div className={`${currentQ.question.imageUrl ? "lg:col-span-4" : "lg:col-span-3"} flex flex-col gap-3 shrink-0`}>
-                  {currentQ.question.imageUrl && (
-                    <div className="w-full aspect-video rounded-2xl overflow-hidden border-2 border-slate-200/90 shadow-sm bg-slate-100 max-h-48">
-                      <img
-                        src={currentQ.question.imageUrl}
-                        alt="Question Visual Reference"
-                        className="w-full h-full object-cover"
-                      />
+                {/* Submissions Gauge */}
+                <div className="w-full lg:w-64 p-4 rounded-2xl bg-white border border-slate-200/90 shadow-sm flex items-center justify-around text-center shrink-0">
+                  <div>
+                    <div className="text-[11px] text-slate-500 uppercase font-bold tracking-wider">
+                      Locked Answers
                     </div>
-                  )}
-
-                  {/* Submissions Gauge */}
-                  <div className="w-full p-3.5 sm:p-4 rounded-2xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-around text-center">
-                    <div>
-                      <div className="text-[10px] sm:text-[11px] text-slate-500 uppercase font-bold tracking-wider">
-                        Locked Submissions
-                      </div>
-                      <div className="text-2xl sm:text-3xl font-black text-blue-600 mt-0.5">
-                        {answerCount.answeredCount} / {answerCount.totalCount || gameState?.totalTeamsCount || 8}
-                      </div>
+                    <div className="text-3xl sm:text-4xl font-black text-blue-600 mt-0.5">
+                      {answerCount.answeredCount} / {answerCount.totalCount || gameState?.totalTeamsCount || 114}
                     </div>
-                    <div className="h-8 w-px bg-slate-200" />
-                    <div className="text-[10px] sm:text-[11px] text-slate-400 font-semibold uppercase">
-                      Live Verified
-                    </div>
+                  </div>
+                  <div className="h-10 w-px bg-slate-200" />
+                  <div className="text-[10px] text-emerald-600 font-bold uppercase flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <span>Real-time</span>
                   </div>
                 </div>
               </div>
+
 
               {/* Solution Reveal Box */}
               {status === "ANSWER_REVEAL" && (
@@ -870,7 +894,7 @@ export default function SmartBoardPage() {
           )}
 
         {/* LEADERBOARD BROADCAST */}
-        {status === "LEADERBOARD" && viewMode !== "PODIUM" && (
+        {(status === "LEADERBOARD" || viewMode === "LEADERBOARD") && viewMode !== "PODIUM" && (
           <div className="max-w-5xl mx-auto w-full my-auto space-y-6">
             <div className="text-center space-y-1">
               <span className="text-xs text-blue-600 font-bold uppercase tracking-wider bg-blue-50 px-3 py-1 rounded-full border border-blue-200">
@@ -889,6 +913,7 @@ export default function SmartBoardPage() {
                     <th className="py-4 px-6">Squad</th>
                     <th className="py-4 px-6 text-center">Score</th>
                     <th className="py-4 px-6 text-center">Accuracy</th>
+                    <th className="py-4 px-6 text-center">Lifelines</th>
                     <th className="py-4 px-6 text-right">Coins</th>
                     <th className="py-4 px-6 text-right">Action</th>
                   </tr>
@@ -919,6 +944,11 @@ export default function SmartBoardPage() {
                       </td>
                       <td className="py-4 px-6 text-center text-slate-600 font-medium">
                         {entry.correctAnswers} / {entry.attemptedQuestions}
+                      </td>
+                      <td className="py-4 px-6 text-center">
+                        <span className="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200 font-mono text-xs font-bold">
+                          {entry.lifelinesUsedCount ?? 0} used
+                        </span>
                       </td>
                       <td className="py-4 px-6 text-right font-bold text-slate-800">
                         💰 {entry.currentBalance.toLocaleString()}
@@ -1203,6 +1233,7 @@ export default function SmartBoardPage() {
                           <th className="py-3.5 px-5">Squad</th>
                           <th className="py-3.5 px-5 text-center">Score</th>
                           <th className="py-3.5 px-5 text-center">Accuracy</th>
+                          <th className="py-3.5 px-5 text-center">Lifelines</th>
                           <th className="py-3.5 px-5 text-right">Coins</th>
                           <th className="py-3.5 px-5 text-right">Action</th>
                         </tr>
@@ -1234,6 +1265,11 @@ export default function SmartBoardPage() {
                                 ? Math.round((entry.correctAnswers / entry.attemptedQuestions) * 100)
                                 : 0}
                               %)
+                            </td>
+                            <td className="py-3.5 px-5 text-center">
+                              <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 font-mono text-xs font-bold">
+                                {entry.lifelinesUsedCount ?? 0}
+                              </span>
                             </td>
                             <td className="py-3.5 px-5 text-right font-mono font-semibold text-slate-800">
                               💰 {entry.currentBalance.toLocaleString()}
@@ -1450,19 +1486,13 @@ export default function SmartBoardPage() {
                             {item.questionText}
                           </p>
 
-                          {/* Clue thumbnail if available */}
-                          {item.imageUrl && (
-                            <div className="h-28 rounded-xl overflow-hidden border border-slate-200 max-w-xs bg-slate-100">
-                              <img src={item.imageUrl} alt="Clue" className="w-full h-full object-cover" />
-                            </div>
-                          )}
-
                           {/* 4 Options Grid */}
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                             {["A", "B", "C", "D"].map((key) => {
                               const optText = item.options[key];
                               const wasSelected = item.teamOption === key;
                               const isCorrectOpt = item.correctOption === key;
+                              const isUnanswered = !item.teamOption && !item.isPassed;
 
                               let optStyle = "bg-white border-slate-200 text-slate-700";
                               if (wasSelected) {
@@ -1471,8 +1501,8 @@ export default function SmartBoardPage() {
                                 } else {
                                   optStyle = "bg-red-50 border-2 border-red-500 text-red-950 font-bold";
                                 }
-                              } else if (isCorrectOpt) {
-                                optStyle = "bg-emerald-50/60 border border-emerald-400 text-emerald-900 font-semibold";
+                              } else if (!isUnanswered && isCorrectOpt) {
+                                optStyle = "bg-emerald-50/70 border border-emerald-400 text-emerald-900 font-semibold";
                               }
 
                               return (
@@ -1492,9 +1522,9 @@ export default function SmartBoardPage() {
                                       {item.isCorrect ? "Picked ✓" : "Picked ✗"}
                                     </span>
                                   )}
-                                  {!wasSelected && isCorrectOpt && (
+                                  {!wasSelected && !isUnanswered && isCorrectOpt && (
                                     <span className="text-[10px] font-bold text-emerald-700 uppercase shrink-0">
-                                      Correct
+                                      Correct Key
                                     </span>
                                   )}
                                 </div>
@@ -1502,7 +1532,7 @@ export default function SmartBoardPage() {
                             })}
                           </div>
 
-                          {/* Lifelines Used & Explanation */}
+                          {/* Lifelines Used & Timing */}
                           <div className="flex flex-wrap items-center justify-between gap-2 pt-1 text-xs">
                             <div className="flex items-center gap-1.5 flex-wrap">
                               {item.lifelinesUsed && item.lifelinesUsed.length > 0 && (
@@ -1528,10 +1558,10 @@ export default function SmartBoardPage() {
                             </div>
                           </div>
 
-                          {/* Solution Explanation */}
-                          {item.explanation && (
-                            <div className="p-2.5 rounded-xl bg-emerald-50/70 border border-emerald-200 text-emerald-950 text-xs">
-                              <span className="font-bold text-emerald-800 mr-1.5">Solution:</span>
+                          {/* Solution Explanation - Only shown for attempted questions */}
+                          {!(!item.teamOption && !item.isPassed) && item.explanation && (
+                            <div className="p-2.5 rounded-xl bg-slate-100 border border-slate-200 text-slate-800 text-xs">
+                              <span className="font-bold text-slate-900 mr-1.5">Solution:</span>
                               <span>{item.explanation}</span>
                             </div>
                           )}
@@ -1560,7 +1590,7 @@ export default function SmartBoardPage() {
 
       <footer className="border-t border-slate-200/80 bg-white py-3 px-6 flex items-center justify-between text-xs text-slate-500">
         <span>THE BIG BULL Live Presentation Engine</span>
-        <span>Synced with Host Controller • 5-Min Timer</span>
+        <span>Synced with Host Controller • 2-Min Timer (120s)</span>
       </footer>
     </div>
   );

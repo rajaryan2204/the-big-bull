@@ -11,6 +11,7 @@ import {
   Lock,
   Coins,
   Wallet,
+  Award,
 } from "lucide-react";
 
 interface RulesInfoModalProps {
@@ -148,7 +149,7 @@ export const RulesInfoModal: React.FC<RulesInfoModalProps> = ({ onClose }) => {
               <div className="flex items-start gap-2">
                 <Clock className="w-3.5 h-3.5 text-blue-600 mt-0.5 shrink-0" />
                 <span>
-                  <strong>5-Minute Live Timer:</strong> Each round lasts exactly 5 minutes synchronized across the central SmartBoard and student terminals.
+                  <strong>2-Minute Live Timer (120s):</strong> Each round lasts exactly 120 seconds synchronized across the central SmartBoard and student terminals.
                 </span>
               </div>
 
@@ -156,6 +157,13 @@ export const RulesInfoModal: React.FC<RulesInfoModalProps> = ({ onClose }) => {
                 <Lock className="w-3.5 h-3.5 text-blue-600 mt-0.5 shrink-0" />
                 <span>
                   <strong>One-Lock Finality:</strong> Any option locked or pass triggered is irreversible. Choose with precision.
+                </span>
+              </div>
+
+              <div className="flex items-start gap-2">
+                <Award className="w-3.5 h-3.5 text-amber-600 mt-0.5 shrink-0" />
+                <span>
+                  <strong>Official Tie-Breaker Protocol:</strong> When total points are equal, ranking is decided by: (1) Highest Correct Answers, (2) Fewest Lifelines Used, (3) Highest Coin Balance.
                 </span>
               </div>
 

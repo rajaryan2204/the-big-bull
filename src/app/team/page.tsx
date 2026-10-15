@@ -865,9 +865,9 @@ export default function TeamTerminalPage() {
                   <span>Clock & Scoring Rules</span>
                 </div>
                 <ul className="list-disc list-inside text-slate-600 space-y-0.5 pl-1">
-                  <li><strong>5-Minute Live Clock:</strong> Rounds last 5 minutes synchronized across board and devices.</li>
+                  <li><strong>2-Minute Live Clock (120s):</strong> Rounds last exactly 120 seconds synchronized across the SmartBoard and all devices.</li>
                   <li><strong>One-Lock Rule:</strong> Once an answer or pass is locked, it cannot be edited or retracted.</li>
-                  <li><strong>Leaderboard Ranking:</strong> Points are awarded for accuracy; speed breaks ties.</li>
+                  <li><strong>Official Tie-Breaker Protocol:</strong> If total scores are equal: (1) Most Correct Answers, (2) Fewest Lifelines Used, (3) Highest Remaining Coins.</li>
                 </ul>
               </div>
 
