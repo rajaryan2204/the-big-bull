@@ -999,6 +999,7 @@ export class DemoStore implements StorageEngine {
     if (prisma) {
       const pUpdates: any = {};
       if (updates.status !== undefined) pUpdates.status = updates.status;
+      if (updates.durationSeconds !== undefined) pUpdates.durationSeconds = updates.durationSeconds;
       if (updates.openedAt !== undefined) pUpdates.openedAt = updates.openedAt ? new Date(updates.openedAt) : null;
       if (updates.deadline !== undefined) pUpdates.deadline = updates.deadline ? new Date(updates.deadline) : null;
       if (updates.closedAt !== undefined) pUpdates.closedAt = updates.closedAt ? new Date(updates.closedAt) : null;

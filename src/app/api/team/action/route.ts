@@ -56,16 +56,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, newBalance: adj.newBalance });
     }
 
-    if (action === "tester:start_practice") {
-      if (game.status === "LOBBY") {
-        await getGameEngine().startGame();
-      }
-      return NextResponse.json({ success: true, status: "QUESTION_ACTIVE" });
+    if (action === "tester:start_practice" || action === "tester:restart_timer") {
+      const idx = game.currentQuestionIndex || 0;
+      await getGameEngine().openQuestionAtIndex(idx, 30);
+      return NextResponse.json({ success: true, status: "QUESTION_ACTIVE", durationSeconds: 30 });
     }
 
     if (action === "tester:next_question") {
-      await getGameEngine().nextQuestion();
-      return NextResponse.json({ success: true });
+      const nextIdx = ((game.currentQuestionIndex ?? 0) + 1) % (game.totalQuestions || 40);
+      await getGameEngine().openQuestionAtIndex(nextIdx, 30);
+      return NextResponse.json({ success: true, status: "QUESTION_ACTIVE", durationSeconds: 30 });
+    }
+
+    if (action === "tester:reset_lobby") {
+      await storage.updateGameStatus("LOBBY");
+      try {
+        await getGameEngine().broadcastAll();
+      } catch (e) {}
+      return NextResponse.json({ success: true, status: "LOBBY" });
     }
 
     if (action === "tester:reveal_answer") {

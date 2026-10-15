@@ -99,7 +99,7 @@ export class GameEngine {
     await this.broadcastAll();
   }
 
-  public async openQuestionAtIndex(orderIndex: number) {
+  public async openQuestionAtIndex(orderIndex: number, customDurationSeconds?: number) {
     const storage = await this.getActiveStorage();
     const game = await storage.getCurrentGame();
     const gq = await storage.getGameQuestionByOrder(game.id, orderIndex);
@@ -107,12 +107,13 @@ export class GameEngine {
       throw new Error(`Question at index ${orderIndex} not found`);
     }
 
-    const durationSeconds = gq.durationSeconds || game.defaultQuestionDuration || 120;
+    const durationSeconds = customDurationSeconds || gq.durationSeconds || game.defaultQuestionDuration || 120;
     const openedAt = new Date().toISOString();
     const deadline = new Date(Date.now() + durationSeconds * 1000).toISOString();
 
     await storage.updateGameQuestion(gq.id, {
       status: "ACTIVE",
+      durationSeconds,
       openedAt,
       deadline,
       closedAt: null,
