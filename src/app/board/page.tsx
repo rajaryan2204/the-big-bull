@@ -60,8 +60,6 @@ export default function SmartBoardPage() {
   const [hostLoginLoading, setHostLoginLoading] = useState<boolean>(false);
   const [hostLoginError, setHostLoginError] = useState<string>("");
 
-  // Auto-advance banner after timer expiration
-  const [autoAdvanceCountdown, setAutoAdvanceCountdown] = useState<number | null>(null);
   const autoAdvanceTriggeredRef = useRef<boolean>(false);
 
   const prevStatusRef = useRef<string>("LOBBY");
@@ -243,8 +241,8 @@ export default function SmartBoardPage() {
     }
   };
 
-  // 5. Host Login & Start Live Competition
-  const handleHostLoginAndStart = async (e: React.FormEvent) => {
+  // 5. Host Login & Unlock Host Mode
+  const handleHostLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setHostLoginLoading(true);
     setHostLoginError("");
@@ -267,31 +265,7 @@ export default function SmartBoardPage() {
         sessionStorage.setItem("bigbull_admin_token", data.token);
       }
 
-      // If game is in Lobby, automatically start Question 1!
-      if (!gameState || gameState.status === "LOBBY" || gameState.status === "READY") {
-        const ctrlRes = await fetch("/api/admin/game/control", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${data.token}`,
-          },
-          body: JSON.stringify({ action: "start_game" }),
-        });
-        const ctrlData = await ctrlRes.json();
-        if (!ctrlRes.ok) {
-          throw new Error(ctrlData.error || "Failed to start Question 1");
-        }
-        if (ctrlData.game) {
-          setGameState(ctrlData.game);
-          if (ctrlData.game.currentQuestion?.deadline) {
-            const ms = new Date(ctrlData.game.currentQuestion.deadline).getTime();
-            setRemainingSeconds(Math.max(0, Math.ceil((ms - Date.now()) / 1000)));
-          }
-        }
-      }
-
       setShowHostModal(false);
-      soundFx.playRevealFanfare();
       await fetchGameState();
     } catch (err: any) {
       setHostLoginError(err.message || "Failed to authenticate");
@@ -322,51 +296,16 @@ export default function SmartBoardPage() {
     }
   };
 
-  // 6. Automatic 2-Minute (120s) Timer Expiry & Progression
+  // 6. Sound buzzer on timer expiration (Manual Host Control - No Auto-Advance)
   useEffect(() => {
     const curStatus = gameState?.status;
     if (curStatus === "QUESTION_ACTIVE" && remainingSeconds === 0 && !autoAdvanceTriggeredRef.current) {
       autoAdvanceTriggeredRef.current = true;
       soundFx.playTimeUpBuzzer();
-
-      // Automatically reveal answer
-      handleHostCommand("reveal_answer")
-        .then(() => {
-          // Start 15s transition countdown to next question
-          setAutoAdvanceCountdown(15);
-        })
-        .catch(() => {
-          setAutoAdvanceCountdown(15);
-        });
     } else if (curStatus !== "QUESTION_ACTIVE") {
       autoAdvanceTriggeredRef.current = false;
     }
   }, [gameState?.status, remainingSeconds]);
-
-  // Auto-advance countdown interval after reveal
-  useEffect(() => {
-    if (autoAdvanceCountdown === null) return;
-    if (autoAdvanceCountdown <= 0) {
-      setAutoAdvanceCountdown(null);
-      const isLastQ =
-        gameState &&
-        gameState.currentQuestionIndex !== undefined &&
-        gameState.totalQuestions !== undefined &&
-        gameState.currentQuestionIndex + 1 >= gameState.totalQuestions;
-
-      if (isLastQ) {
-        handleHostCommand("show_leaderboard").catch(() => {});
-      } else {
-        handleHostCommand("next_question").catch(() => {});
-      }
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      setAutoAdvanceCountdown(autoAdvanceCountdown - 1);
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, [autoAdvanceCountdown, gameState]);
 
   // 7. Sound Dispatcher
   useEffect(() => {
@@ -610,7 +549,7 @@ export default function SmartBoardPage() {
 
             <div className="space-y-1">
               <p className="text-xs text-slate-500">
-                Enter your credentials to unlock live controls and begin the 5-minute timed rounds.
+                Enter host credentials to unlock live host controls on this screen.
               </p>
             </div>
 
@@ -620,7 +559,7 @@ export default function SmartBoardPage() {
               </div>
             )}
 
-            <form onSubmit={handleHostLoginAndStart} className="space-y-3.5">
+            <form onSubmit={handleHostLogin} className="space-y-3.5">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
                   Username
@@ -656,8 +595,8 @@ export default function SmartBoardPage() {
                   <span>Authenticating...</span>
                 ) : (
                   <>
-                    <Play className="w-4 h-4 fill-current" />
-                    <span>Unlock & Start Competition (2-Min Rounds • 120s)</span>
+                    <Key className="w-4 h-4" />
+                    <span>Unlock Host Controls</span>
                   </>
                 )}
               </button>
@@ -777,25 +716,21 @@ export default function SmartBoardPage() {
                 </div>
               </div>
 
-              {/* Auto-Advance Notification Banner */}
-              {autoAdvanceCountdown !== null && (
-                <div className="p-3 sm:p-4 rounded-2xl bg-blue-50 border border-blue-200 text-blue-900 flex items-center justify-between gap-4 animate-in fade-in shrink-0">
+              {/* Round Closed Host Guidance Banner */}
+              {status === "QUESTION_CLOSED" && (
+                <div className="p-3 sm:p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-950 flex items-center justify-between gap-4 animate-in fade-in shrink-0">
                   <div className="flex items-center gap-2 font-bold text-sm">
-                    <Sparkles className="w-5 h-5 text-blue-600 shrink-0" />
+                    <Clock className="w-5 h-5 text-amber-600 shrink-0" />
                     <span>
-                      Time&apos;s Up! Next question will begin automatically in{" "}
-                      <strong className="font-mono text-blue-700 text-base">{autoAdvanceCountdown}s</strong>
+                      Round Time Expired (120s) • Round Closed. Click <strong>Reveal Answer</strong> when ready to show the solution.
                     </span>
                   </div>
                   <button
-                    onClick={() => {
-                      setAutoAdvanceCountdown(null);
-                      handleHostCommand("next_question").catch(() => {});
-                    }}
-                    className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs cursor-pointer flex items-center gap-1 shrink-0"
+                    onClick={() => handleHostCommand("reveal_answer").catch(() => {})}
+                    className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-black shadow-xs cursor-pointer flex items-center gap-1.5 shrink-0"
                   >
-                    <span>Next Question Now</span>
-                    <ChevronRight className="w-4 h-4" />
+                    <Sparkles className="w-4 h-4" />
+                    <span>Reveal Answer</span>
                   </button>
                 </div>
               )}
